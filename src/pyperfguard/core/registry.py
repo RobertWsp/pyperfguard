@@ -4,12 +4,10 @@ import ast
 import importlib.metadata
 from collections import defaultdict
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import cast
 
 from pyperfguard.core.rule import Rule, RuleScope
-
-if TYPE_CHECKING:
-    pass
+from pyperfguard.runtime_engine.patcher import Patcher
 
 _RULES_GROUP = "pyperfguard.rules"
 _REPORTERS_GROUP = "pyperfguard.reporters"
@@ -29,7 +27,7 @@ class Registry:
         self._rules_by_node_type: dict[type[ast.AST], list[Rule]] = defaultdict(list)
         self._catch_all_rules: list[Rule] = []
         self._reporters: dict[str, type] = {}
-        self._patchers: dict[str, object] = {}
+        self._patchers: dict[str, Patcher] = {}
         self._discovered = False
 
     # ----- Rules ------------------------------------------------------------
@@ -86,10 +84,10 @@ class Registry:
 
     # ----- Patchers ---------------------------------------------------------
 
-    def register_patcher(self, name: str, obj: object) -> None:
+    def register_patcher(self, name: str, obj: Patcher) -> None:
         self._patchers[name] = obj
 
-    def patchers(self) -> dict[str, object]:
+    def patchers(self) -> dict[str, Patcher]:
         return dict(self._patchers)
 
     # ----- Discovery --------------------------------------------------------
@@ -111,7 +109,7 @@ class Registry:
                 _warn(f"Failed to load reporter {ep.name!r}: {exc}")
         for ep in importlib.metadata.entry_points(group=_PATCHERS_GROUP):
             try:
-                self.register_patcher(ep.name, ep.load()())
+                self.register_patcher(ep.name, cast(Patcher, ep.load()()))
             except Exception as exc:
                 _warn(f"Failed to load patcher {ep.name!r}: {exc}")
         self._discovered = True

@@ -52,7 +52,7 @@ class CassandraPatcher:
     # ----- Request listener ------------------------------------------------
 
     def _on_request(self, response_future: object) -> None:
-        query_str = _extract_cql(response_future)  # type: ignore[arg-type]
+        query_str = _extract_cql(response_future)
         if not query_str:
             return
 
@@ -72,7 +72,9 @@ class CassandraPatcher:
             duration = time.perf_counter() - start
             rows = None
             try:
-                rows = result.current_rows.__len__()  # type: ignore[union-attr]
+                current_rows = getattr(result, "current_rows", None)
+                if current_rows is not None:
+                    rows = len(current_rows)
             except Exception:
                 pass
             get_event_bus().emit(
@@ -102,7 +104,9 @@ class CassandraPatcher:
             )
 
         try:
-            response_future.add_callbacks(_on_success, _on_error)  # type: ignore[union-attr]
+            add_callbacks = getattr(response_future, "add_callbacks", None)
+            if add_callbacks is not None:
+                add_callbacks(_on_success, _on_error)
         except Exception:
             pass
 

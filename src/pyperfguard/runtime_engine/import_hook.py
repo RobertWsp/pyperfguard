@@ -26,11 +26,11 @@ class _PatchingLoader(Loader):
 
     def create_module(self, spec: ModuleSpec) -> ModuleType | None:
         if hasattr(self._inner, "create_module"):
-            return self._inner.create_module(spec)  # type: ignore[attr-defined]
+            return self._inner.create_module(spec)
         return None
 
     def exec_module(self, module: ModuleType) -> None:
-        self._inner.exec_module(module)  # type: ignore[attr-defined]
+        self._inner.exec_module(module)
         try:
             self._patcher.install(module)
         except Exception as exc:

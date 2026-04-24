@@ -119,7 +119,10 @@ def unwrap_connect(module: ModuleType) -> None:
     original = getattr(module, "_pyperfguard_original_connect", None)
     if original is not None:
         module.connect = original
-        del module._pyperfguard_original_connect
+        try:
+            delattr(module, "_pyperfguard_original_connect")
+        except AttributeError:
+            pass
 
 
 class DBAPIPatcher:

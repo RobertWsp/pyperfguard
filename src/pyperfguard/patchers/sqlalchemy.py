@@ -17,6 +17,7 @@ from __future__ import annotations
 import threading
 import time
 from types import ModuleType
+from typing import Any
 
 
 class SQLAlchemyPatcher:
@@ -60,12 +61,30 @@ class SQLAlchemyPatcher:
 
     # ----- Event handlers --------------------------------------------------
 
-    def _before(self, conn, cursor, statement, parameters, context, executemany, **_kw) -> None:
+    def _before(
+        self,
+        conn: Any,
+        cursor: Any,
+        statement: Any,
+        parameters: Any,
+        context: Any,
+        executemany: Any,
+        **_kw: Any,
+    ) -> None:
         if not hasattr(self._local, "pending"):
             self._local.pending = {}
         self._local.pending[id(cursor)] = time.perf_counter()
 
-    def _after(self, conn, cursor, statement, parameters, context, executemany, **_kw) -> None:
+    def _after(
+        self,
+        conn: Any,
+        cursor: Any,
+        statement: Any,
+        parameters: Any,
+        context: Any,
+        executemany: Any,
+        **_kw: Any,
+    ) -> None:
         pending = getattr(self._local, "pending", {})
         start = pending.pop(id(cursor), None)
         duration = (time.perf_counter() - start) if start is not None else None
@@ -87,15 +106,16 @@ class SQLAlchemyPatcher:
             )
         )
 
-    def _on_error(self, exception_context, **_kw) -> None:
+    def _on_error(self, exception_context: Any, **_kw: Any) -> None:
         cursor = getattr(exception_context, "cursor", None)
         if cursor is not None:
             pending = getattr(self._local, "pending", {})
             pending.pop(id(cursor), None)
 
 
-def _dialect_name(conn: object) -> str:
+def _dialect_name(conn: Any) -> str:
     try:
-        return conn.engine.dialect.name  # type: ignore[union-attr]
+        name = getattr(getattr(getattr(conn, "engine", None), "dialect", None), "name", None)
+        return str(name) if name is not None else "sql"
     except Exception:
         return "sql"

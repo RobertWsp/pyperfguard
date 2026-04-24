@@ -44,6 +44,7 @@ class JsonReporter:
     ) -> None:
         self.stream = stream or sys.stdout
         self.verbose = verbose
+        self.indent: int | None
         if indent is not None:
             self.indent = indent
         elif verbose or (hasattr(self.stream, "isatty") and self.stream.isatty()):

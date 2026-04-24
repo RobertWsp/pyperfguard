@@ -24,7 +24,7 @@ class PyperfVisitor(ast.NodeVisitor):
         self.ctx = ctx
         self.findings: list[Finding] = []
 
-    def visit(self, node: ast.AST) -> None:  # type: ignore[override]
+    def visit(self, node: ast.AST) -> None:
         self._dispatch(node)
         self.ctx.ancestors.append(node)
         try:

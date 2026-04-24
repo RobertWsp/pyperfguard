@@ -25,14 +25,14 @@ class _PyPerfMongoListener:
 
     def __init__(self) -> None:
         self._active = True
-        self._pending: dict[int, tuple[str, str, tuple, int | None, float]] = {}
+        self._pending: dict[int, tuple[str, str, tuple[str, ...], int | None, float]] = {}
         # key: request_id → (fingerprint, collection, stack_frames, call_site, start)
         self._lock = threading.Lock()
 
     def deactivate(self) -> None:
         self._active = False
 
-    def started(self, event: object) -> None:  # type: ignore[override]
+    def started(self, event: object) -> None:
         if not self._active:
             return
         from pyperfguard.core.frame_utils import format_frames, walk_user_frames
@@ -48,13 +48,13 @@ class _PyPerfMongoListener:
         with self._lock:
             self._pending[rid] = (fp, stmt, format_frames(frames), cs_fp, time.perf_counter())
 
-    def succeeded(self, event: object) -> None:  # type: ignore[override]
+    def succeeded(self, event: object) -> None:
         if not self._active:
             return
         from pyperfguard.runtime_engine.event_bus import get_event_bus
         from pyperfguard.runtime_engine.events import QueryEvent
 
-        rid = getattr(event, "request_id", None)
+        rid: int = getattr(event, "request_id", -1)
         with self._lock:
             entry = self._pending.pop(rid, None)
         if entry is None:
@@ -71,13 +71,13 @@ class _PyPerfMongoListener:
             )
         )
 
-    def failed(self, event: object) -> None:  # type: ignore[override]
+    def failed(self, event: object) -> None:
         if not self._active:
             return
         from pyperfguard.runtime_engine.event_bus import get_event_bus
         from pyperfguard.runtime_engine.events import QueryEvent
 
-        rid = getattr(event, "request_id", None)
+        rid: int = getattr(event, "request_id", -1)
         with self._lock:
             entry = self._pending.pop(rid, None)
         if entry is None:

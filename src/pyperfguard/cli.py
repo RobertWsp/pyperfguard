@@ -135,9 +135,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"pyperfguard: auto-instrumentation installed → {path}")
             return 0
         if args.bs_command == "uninstall":
-            path = uninstall_sitecustomize(sp)
-            if path:
-                print(f"pyperfguard: auto-instrumentation removed from {path}")
+            removed_path = uninstall_sitecustomize(sp)
+            if removed_path:
+                print(f"pyperfguard: auto-instrumentation removed from {removed_path}")
             else:
                 print("pyperfguard: hook not found — nothing to remove")
             return 0

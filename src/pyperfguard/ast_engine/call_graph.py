@@ -1087,7 +1087,7 @@ class CallGraph:
                     if is_small_n_direct:
                         continue
                     if loop_vars:
-                        receiver = node.func.value  # type: ignore[union-attr]
+                        receiver = node.func.value if isinstance(node.func, ast.Attribute) else None
                         if not (isinstance(receiver, ast.Name) and receiver.id in loop_vars):
                             continue
                     callee = self._callee_name(node) or "save"
@@ -1101,8 +1101,9 @@ class CallGraph:
                 # companies/instances without parameterising by loop variable.
                 if is_small_n_indirect:
                     continue
-                callee = self._callee_name(node)
-                if callee and self._is_directly_db_adjacent(callee):
+                callee_opt = self._callee_name(node)
+                if callee_opt and self._is_directly_db_adjacent(callee_opt):
+                    callee = callee_opt
                     if loop_vars and not _uses_any(node, loop_vars):
                         continue
                     # ── Ancestor-parameter (closure) guard ─────────────────
@@ -1349,8 +1350,9 @@ class CallGraph:
                     callee = self._callee_name(node) or "save"
                     yield self._make_while_finding(loop, node, callee, fn_info, severity)
                     return
-                callee = self._callee_name(node)
-                if callee and self._is_directly_db_adjacent(callee):
+                callee_opt2 = self._callee_name(node)
+                if callee_opt2 and self._is_directly_db_adjacent(callee_opt2):
+                    callee = callee_opt2
                     if isinstance(node.func, ast.Name) and node.func.id in fn_info.ancestor_params:
                         continue
                     if isinstance(node.func, ast.Name) and node.func.id in _BUILTIN_BARE_CALL_NAMES:

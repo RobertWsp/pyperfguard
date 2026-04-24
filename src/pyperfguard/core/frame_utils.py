@@ -61,7 +61,10 @@ def walk_user_frames(skip: int = 1, limit: int = 10) -> list[FrameRef]:
                     funcname=frame.f_code.co_name,
                 )
             )
-        frame = frame.f_back
+        next_frame = frame.f_back
+        if next_frame is None:
+            break
+        frame = next_frame
     return out
 
 
