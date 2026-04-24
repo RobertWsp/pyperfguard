@@ -8,22 +8,21 @@ Tests cover:
 - Nested profile scopes are properly isolated
 - DBAPIPatcher captures duration_s, db_system, and fingerprint
 """
+
 from __future__ import annotations
 
 import asyncio
 import sqlite3
 import types
-import time
 
 import pytest
 
 from pyperfguard.detectors.nplusone import NPlusOneDetector
-from pyperfguard.patchers.dbapi import wrap_connect, unwrap_connect
+from pyperfguard.patchers.dbapi import unwrap_connect, wrap_connect
 from pyperfguard.runtime_engine.event_bus import get_event_bus, reset_event_bus
 from pyperfguard.runtime_engine.events import QueryEvent
 from pyperfguard.runtime_engine.profile import profile
-from pyperfguard.runtime_engine.scope import Scope, set_scope, reset_scope, current_scope
-
+from pyperfguard.runtime_engine.scope import Scope, current_scope, reset_scope, set_scope
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -181,18 +180,20 @@ class TestDifferentCallSites:
                 cur = memory_conn.cursor()
                 cur.execute("SELECT title FROM posts WHERE id = ?", (i,))
                 cur.fetchall()
+
             # Call 2: from a nested helper (different stack frame hash)
             def _inner_fetch():
                 for i in range(5):
                     cur = memory_conn.cursor()
                     cur.execute("SELECT title FROM posts WHERE id = ?", (i,))
                     cur.fetchall()
+
             _inner_fetch()
         finally:
             reset_scope(token)
 
         # The two groups have different call_site hashes → detector groups them separately
-        events = list(scope.filter("query"))
+        list(scope.filter("query"))
         # Fingerprints of the same SELECT are identical — but call_site may differ.
         # With threshold=3 and groups of 5 having the same call_site, we CAN get a finding.
         # The test verifies behaviour, not a specific count.
@@ -232,18 +233,17 @@ class TestProfileScopeIsolation:
         assert len(inner_events) == 8
         # Outer scope captured only its 1 query (the CREATE TABLE queries
         # ran before scope was set, so they're not recorded by the outer scope)
-        assert all(
-            "inner_t" not in (e.statement or "") for e in outer_events
-        ), "inner_t queries leaked into outer scope"
+        assert all("inner_t" not in (e.statement or "") for e in outer_events), (
+            "inner_t queries leaked into outer scope"
+        )
 
     def test_scope_exits_cleanly_on_exception(self, instrumented):
         """profile() scope is reset even when the body raises."""
         conn = instrumented.connect(":memory:")
 
-        with pytest.raises(RuntimeError):
-            with profile(name="failing") as session:
-                conn.cursor().execute("SELECT 1")
-                raise RuntimeError("deliberate")
+        with pytest.raises(RuntimeError), profile(name="failing"):
+            conn.cursor().execute("SELECT 1")
+            raise RuntimeError("deliberate")
 
         # Scope is reset: no current scope after the with block
         assert current_scope() is None
@@ -394,8 +394,7 @@ class TestQueryEventMetadata:
         scoped_events = [e for e in scope.events() if isinstance(e, QueryEvent)]
         # Only the two SELECT queries (not CREATE/INSERT which ran before scope was set)
         select_events = [
-            e for e in scoped_events
-            if e.statement and "FP_TEST" in (e.statement or "").upper()
+            e for e in scoped_events if e.statement and "FP_TEST" in (e.statement or "").upper()
         ]
         assert len(select_events) == 2
         assert select_events[0].fingerprint == select_events[1].fingerprint
@@ -420,7 +419,8 @@ class TestQueryEventMetadata:
             reset_scope(token)
 
         query_events = [
-            e for e in captured
+            e
+            for e in captured
             if e.statement and ("FROM A" in e.statement.upper() or "FROM B" in e.statement.upper())
         ]
         assert len(query_events) == 2

@@ -123,10 +123,6 @@ def test_functools_cache_not_flagged():
 
 def test_uncached_function_still_flagged():
     # No caching decorator → still a true positive.
-    src = (
-        "def get_data():\n"
-        "    import pandas as pd\n"
-        "    return pd.read_csv('data.csv')\n"
-    )
+    src = "def get_data():\n    import pandas as pd\n    return pd.read_csv('data.csv')\n"
     findings = _run(src)
     assert len(findings) == 1

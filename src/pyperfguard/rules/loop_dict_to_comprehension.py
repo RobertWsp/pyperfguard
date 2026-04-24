@@ -23,7 +23,7 @@ Detection heuristic:
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -77,9 +77,7 @@ class LoopDictToComprehensionRule:
             node=node,
             ctx=ctx,
             severity=self.severity,
-            fix=Fix(
-                description=f"Replace with ``{dict_var} = {{key: value for ... in ...}}``."
-            ),
+            fix=Fix(description=f"Replace with ``{dict_var} = {{key: value for ... in ...}}``."),
         )
 
     @staticmethod

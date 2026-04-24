@@ -5,8 +5,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-import pytest
-
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.ast_engine.visitor import PyperfVisitor
 from pyperfguard.core.registry import Registry
@@ -26,6 +24,7 @@ def _run(src: str, *rules) -> list:
 
 
 # ── PKN011: cassandra-prepare-in-loop ────────────────────────────────────────
+
 
 class TestCassandraPrepareLoop:
     def test_prepare_inside_loop_flagged(self):
@@ -55,6 +54,7 @@ class TestCassandraPrepareLoop:
 
 
 # ── PKN012: cassandra-in-multi-partition ─────────────────────────────────────
+
 
 class TestCassandraInQuery:
     def test_in_with_percent_s_flagged(self):
@@ -138,11 +138,7 @@ class TestCassandraInQuery:
 
     def test_non_first_string_in_function_flagged(self):
         # A string that is NOT the docstring (not the first statement) IS flagged.
-        src = (
-            "def f():\n"
-            "    x = 1\n"
-            "    session.execute('SELECT * FROM t WHERE id IN %s', ids)\n"
-        )
+        src = "def f():\n    x = 1\n    session.execute('SELECT * FROM t WHERE id IN %s', ids)\n"
         findings = _run(src, CassandraInQueryRule())
         assert len(findings) == 1
 
@@ -179,11 +175,11 @@ class TestCassandraInQuery:
             "Could not find manager %s in %s.\nPlease inherit from managers.",
             "The row in table '%s' with primary key '%s' has invalid: %s in %s.",
         ]:
-            findings = _run(f"x = {repr(s)}", CassandraInQueryRule())
+            findings = _run(f"x = {s!r}", CassandraInQueryRule())
             # These are string assignments (ast.Assign), not standalone expressions,
             # so they bypass the module-level docstring exclusion.
             # They should NOT be flagged because they have only 1 SQL keyword.
-            assert findings == [], f"Should not flag: {repr(s[:60])}"
+            assert findings == [], f"Should not flag: {s[:60]!r}"
 
     def test_two_sql_keywords_flagged(self):
         # A string with SELECT+FROM (2 keywords) and IN %s → flagged correctly.
@@ -193,6 +189,7 @@ class TestCassandraInQuery:
 
 
 # ── PKN013: cassandra-batch-in-loop ──────────────────────────────────────────
+
 
 class TestCassandraBatchLoop:
     def test_batch_add_in_loop_flagged(self):
@@ -235,6 +232,7 @@ class TestCassandraBatchLoop:
         findings = _run(src, CassandraBatchLoopRule())
         assert len(findings) == 1
         from pyperfguard.core.severity import Severity
+
         assert findings[0].severity == Severity.WARNING
 
     def test_logged_batch_flagged_as_info(self):
@@ -247,6 +245,7 @@ class TestCassandraBatchLoop:
         findings = _run(src, CassandraBatchLoopRule())
         assert len(findings) == 1
         from pyperfguard.core.severity import Severity
+
         assert findings[0].severity == Severity.INFO
 
     def test_logged_batch_positional_arg_flagged_as_info(self):
@@ -259,15 +258,14 @@ class TestCassandraBatchLoop:
         findings = _run(src, CassandraBatchLoopRule())
         assert len(findings) == 1
         from pyperfguard.core.severity import Severity
+
         assert findings[0].severity == Severity.INFO
 
     def test_unknown_batch_type_flagged_as_warning(self):
         # No BatchStatement creation found → default WARNING.
-        src = (
-            "for row in rows:\n"
-            "    batch.add(insert_stmt, (row.id,))\n"
-        )
+        src = "for row in rows:\n    batch.add(insert_stmt, (row.id,))\n"
         findings = _run(src, CassandraBatchLoopRule())
         assert len(findings) == 1
         from pyperfguard.core.severity import Severity
+
         assert findings[0].severity == Severity.WARNING

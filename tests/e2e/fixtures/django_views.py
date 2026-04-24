@@ -7,18 +7,19 @@ Demonstrates common Django ORM anti-patterns found in production code:
 - Bare except swallowing errors silently (PKN002)
 - Blocking calls inside async views (PKN009)
 """
+
 from __future__ import annotations
 
 import json
 import time
-import requests
-from datetime import datetime
 from typing import Any
 
+import requests
 
 # ---------------------------------------------------------------------------
 # Simulated ORM / model stubs (no real Django needed)
 # ---------------------------------------------------------------------------
+
 
 class QuerySet:
     def __init__(self, items):
@@ -63,7 +64,8 @@ class Comment:
 # PKN001 — mutable default arguments
 # ---------------------------------------------------------------------------
 
-def build_filter_params(status="published", tags=[]):   # PKN001: list default
+
+def build_filter_params(status="published", tags=[]):  # PKN001: mutable list default
     """Build ORM filter kwargs from request query params."""
     params = {"status": status}
     if tags:
@@ -71,7 +73,7 @@ def build_filter_params(status="published", tags=[]):   # PKN001: list default
     return params
 
 
-def get_pagination_opts(page=1, per_page=20, extra={}):  # PKN001: dict default
+def get_pagination_opts(page=1, per_page=20, extra={}):  # PKN001: mutable dict default
     """Return pagination parameters for list views."""
     opts = {"page": page, "per_page": per_page}
     opts.update(extra)
@@ -82,11 +84,12 @@ def get_pagination_opts(page=1, per_page=20, extra={}):  # PKN001: dict default
 # PKN002 — bare except
 # ---------------------------------------------------------------------------
 
+
 def safe_json_body(request_body: bytes) -> dict[str, Any]:
     """Parse request JSON body, returning empty dict on any failure."""
     try:
         return json.loads(request_body)
-    except:                                               # PKN002: bare except
+    except:  # PKN002 fixture: intentional bare except
         return {}
 
 
@@ -95,7 +98,7 @@ def load_user_preferences(user_id: int) -> dict[str, Any]:
     try:
         raw = _fetch_preferences_blob(user_id)
         return json.loads(raw)
-    except:                                               # PKN002: bare except
+    except:  # PKN002 fixture: intentional bare except
         return {"theme": "light", "notifications": True}
 
 
@@ -107,10 +110,11 @@ def _fetch_preferences_blob(user_id: int) -> str:
 # PKN003 — string concatenation inside a loop
 # ---------------------------------------------------------------------------
 
+
 def render_tag_cloud(tags) -> str:
     """Render an HTML tag cloud from a queryset of tags."""
     html = ""
-    for tag in tags:                                      # PKN003: += in loop
+    for tag in tags:  # PKN003: += in loop
         html += f'<a href="/tags/{tag.slug}/" class="tag">{tag.name}</a> '
     return html.strip()
 
@@ -118,7 +122,7 @@ def render_tag_cloud(tags) -> str:
 def build_csv_export(posts) -> str:
     """Export post list as CSV without using csv module."""
     csv = "id,title,author,created_at\n"
-    for post in posts:                                    # PKN003: += in loop
+    for post in posts:  # PKN003: += in loop
         csv += f'{post.pk},"{post.title}",{post.author_id},{post.created_at}\n'
     return csv
 
@@ -126,6 +130,7 @@ def build_csv_export(posts) -> str:
 # ---------------------------------------------------------------------------
 # PKN009 — blocking calls inside async views
 # ---------------------------------------------------------------------------
+
 
 async def async_post_list(request):
     """Async view: fetch posts and enrich with external metadata."""
@@ -135,15 +140,17 @@ async def async_post_list(request):
     response = requests.get("https://api.internal/post-stats")  # PKN009
     stats = response.json() if response.ok else {}
 
-    time.sleep(0.05)                                      # PKN009: blocks event loop
+    time.sleep(0.05)  # PKN009: blocks event loop
 
     results = []
     for post in posts:
-        results.append({
-            "id": post.pk,
-            "title": post.title,
-            "views": stats.get(str(post.pk), 0),
-        })
+        results.append(
+            {
+                "id": post.pk,
+                "title": post.title,
+                "views": stats.get(str(post.pk), 0),
+            }
+        )
     return {"posts": results}
 
 

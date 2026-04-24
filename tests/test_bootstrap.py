@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import textwrap
-
-import pytest
-
 
 def test_auto_instrument_is_idempotent(tmp_path):
     """Calling auto_instrument() twice should not install patchers twice."""
@@ -24,6 +20,7 @@ def test_auto_instrument_is_idempotent(tmp_path):
     finally:
         bs_mod._active = False
         import sys
+
         sys.__dict__.pop("__pyperfguard_engine__", None)
 
 

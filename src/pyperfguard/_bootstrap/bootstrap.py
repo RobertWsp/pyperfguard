@@ -60,9 +60,10 @@ _MARKER_END = "# end pyperfguard"
 
 def _find_site_packages() -> str:
     import site
+
     candidates = site.getsitepackages() if hasattr(site, "getsitepackages") else []
     if site.getusersitepackages():
-        candidates = [site.getusersitepackages()] + list(candidates)
+        candidates = [site.getusersitepackages(), *list(candidates)]
     # Prefer the one that already contains pyperfguard (editable install).
     for sp in candidates:
         if os.path.isdir(os.path.join(sp, "pyperfguard")):

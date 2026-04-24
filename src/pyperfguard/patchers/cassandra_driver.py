@@ -103,11 +103,12 @@ class CassandraPatcher:
 
         try:
             response_future.add_callbacks(_on_success, _on_error)  # type: ignore[union-attr]
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
 
 # ---------------------------------------------------------------------------
+
 
 def _extract_cql(rf: object) -> str | None:
     q = getattr(rf, "query", None)

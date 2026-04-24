@@ -31,7 +31,7 @@ a filter expression: ``[f(x) for x in xs if cond(x)]``.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -65,7 +65,11 @@ class LoopAppendToComprehensionRule:
         if target_var is None:
             return
         # Must have exactly one positional argument (the value being appended).
-        if len(call_expr.args) != 1 or call_expr.keywords or call_expr.starargs if hasattr(call_expr, 'starargs') else call_expr.keywords:
+        if (
+            len(call_expr.args) != 1 or call_expr.keywords or call_expr.starargs
+            if hasattr(call_expr, "starargs")
+            else call_expr.keywords
+        ):
             return
         # Find immediately preceding statement in parent body.
         if not self._has_preceding_empty_list(target_var, node, ctx):
@@ -81,9 +85,7 @@ class LoopAppendToComprehensionRule:
             node=node,
             ctx=ctx,
             severity=self.severity,
-            fix=Fix(
-                description=f"Replace with ``{target_var} = [expr for ... in ...]``."
-            ),
+            fix=Fix(description=f"Replace with ``{target_var} = [expr for ... in ...]``."),
         )
 
     @staticmethod

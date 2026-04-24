@@ -28,13 +28,12 @@ optimisation, especially in loops.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
 from pyperfguard.core.rule import RuleScope
 from pyperfguard.core.severity import Severity
-
 
 # Functions whose sole effect here is to build an unnecessary sequence.
 _REDUNDANT_WRAPPERS = frozenset({"list", "tuple", "sorted", "reversed"})

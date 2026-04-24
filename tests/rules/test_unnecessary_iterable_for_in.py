@@ -1,4 +1,5 @@
 """Tests for PKN020: unnecessary iterable construction for the ``in`` operator."""
+
 from __future__ import annotations
 
 import ast

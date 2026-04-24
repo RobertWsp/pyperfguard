@@ -14,9 +14,10 @@ others or the recording path.
 
 from __future__ import annotations
 
+import contextlib
 import sys
 import threading
-from typing import Callable
+from collections.abc import Callable
 
 from pyperfguard.runtime_engine.events import Event
 from pyperfguard.runtime_engine.scope import current_scope
@@ -34,11 +35,8 @@ class EventBus:
             self._subscribers.append(fn)
 
     def unsubscribe(self, fn: Subscriber) -> None:
-        with self._lock:
-            try:
-                self._subscribers.remove(fn)
-            except ValueError:
-                pass
+        with self._lock, contextlib.suppress(ValueError):
+            self._subscribers.remove(fn)
 
     def emit(self, event: Event) -> None:
         scope = current_scope()
@@ -50,7 +48,7 @@ class EventBus:
         for sub in subs:
             try:
                 sub(event)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 print(f"[pyperfguard] subscriber failed: {exc}", file=sys.stderr)
 
 

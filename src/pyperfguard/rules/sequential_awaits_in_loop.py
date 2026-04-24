@@ -34,7 +34,7 @@ loop generically. PKN025 focuses specifically on the gather-refactor pattern.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -96,12 +96,10 @@ class SequentialAwaitsInLoopRule:
         """Return Await nodes from top-level Expr or Assign statements."""
         awaits: list[ast.Await] = []
         for stmt in body:
-            if isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Await):
-                awaits.append(stmt.value)
-            elif isinstance(stmt, ast.Assign) and isinstance(stmt.value, ast.Await):
-                awaits.append(stmt.value)
-            elif (
-                isinstance(stmt, ast.AugAssign) and isinstance(stmt.value, ast.Await)
+            if (
+                (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Await))
+                or (isinstance(stmt, ast.Assign) and isinstance(stmt.value, ast.Await))
+                or (isinstance(stmt, ast.AugAssign) and isinstance(stmt.value, ast.Await))
             ):
                 awaits.append(stmt.value)
         return awaits

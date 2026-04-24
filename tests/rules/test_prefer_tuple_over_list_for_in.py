@@ -1,4 +1,5 @@
 """Tests for PKN022: prefer tuple over list literal for ``in`` operator."""
+
 from __future__ import annotations
 
 import ast

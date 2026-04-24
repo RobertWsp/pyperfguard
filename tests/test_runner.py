@@ -89,10 +89,7 @@ def test_runner_debug_logs_skipped_file(tmp_path: Path, caplog):
 
 def test_runner_select_filter(tmp_path: Path):
     p = tmp_path / "x.py"
-    p.write_text(
-        "def f(x=[]): pass\n"
-        "try:\n    g()\nexcept:\n    pass\n"
-    )
+    p.write_text("def f(x=[]): pass\ntry:\n    g()\nexcept:\n    pass\n")
     cfg = Config(select=["PKN001"])
     findings = analyze([p], registry=_make_registry(), config=cfg, discover=False)
     assert {f.rule_id for f in findings} == {"PKN001"}

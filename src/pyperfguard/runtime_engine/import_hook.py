@@ -8,12 +8,13 @@ afterwards (or already in ``sys.modules``), the patcher runs exactly once.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import sys
+from collections.abc import Sequence
 from importlib.abc import Loader, MetaPathFinder
 from importlib.machinery import ModuleSpec
 from types import ModuleType
-from typing import Sequence
 
 from pyperfguard.runtime_engine.patcher import Patcher
 
@@ -32,7 +33,7 @@ class _PatchingLoader(Loader):
         self._inner.exec_module(module)  # type: ignore[attr-defined]
         try:
             self._patcher.install(module)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(
                 f"[pyperfguard] patcher for {self._patcher.module_name!r} failed: {exc}",
                 file=sys.stderr,
@@ -54,7 +55,7 @@ class PyperfMetaPathFinder(MetaPathFinder):
             try:
                 patcher.install(existing)
                 self._installed.add(patcher.module_name)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 print(
                     f"[pyperfguard] retro-patch for {patcher.module_name!r} failed: {exc}",
                     file=sys.stderr,
@@ -66,10 +67,8 @@ class PyperfMetaPathFinder(MetaPathFinder):
             return
         existing = sys.modules.get(module_name)
         if existing is not None:
-            try:
+            with contextlib.suppress(Exception):
                 patcher.uninstall(existing)
-            except Exception:
-                pass
         self._installed.discard(module_name)
 
     def find_spec(

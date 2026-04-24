@@ -122,12 +122,7 @@ def test_noqa_multiple_codes_suppresses_targeted():
 
 
 def test_in_async_function_helper():
-    src = (
-        "async def a():\n"
-        "    foo()\n"
-        "def b():\n"
-        "    foo()\n"
-    )
+    src = "async def a():\n    foo()\ndef b():\n    foo()\n"
     captured: list[bool] = []
 
     class Probe:

@@ -17,10 +17,10 @@ __all__ = [
     "Rule",
     "RuleScope",
     "Severity",
-    "profile",
-    "async_profile",
-    "analyze",
     "__version__",
+    "analyze",
+    "async_profile",
+    "profile",
 ]
 
 __version__ = "0.1.0"

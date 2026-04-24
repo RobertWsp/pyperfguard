@@ -18,7 +18,7 @@ slower, especially on network filesystems.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -68,9 +68,7 @@ class OpenInLoopRule:
                 node=call,
                 ctx=ctx,
                 severity=self.severity,
-                fix=Fix(
-                    description="Hoist ``open(...)`` outside the loop body."
-                ),
+                fix=Fix(description="Hoist ``open(...)`` outside the loop body."),
             )
             return  # one finding per With, avoid duplicates
 

@@ -1,4 +1,5 @@
 """Tests for PKN024: synchronous Cassandra session.execute() inside async def."""
+
 from __future__ import annotations
 
 import ast
@@ -75,10 +76,7 @@ def test_plain_session_receiver_flagged():
 
 
 def test_cassandra_session_receiver_flagged():
-    src = (
-        "async def get(self):\n"
-        "    return cassandra_session.execute(stmt)\n"
-    )
+    src = "async def get(self):\n    return cassandra_session.execute(stmt)\n"
     findings = _run(src)
     assert len(findings) == 1
 

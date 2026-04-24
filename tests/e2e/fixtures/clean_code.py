@@ -11,6 +11,7 @@ Demonstrates correct patterns for all rules:
 - immutable function defaults (None sentinels)
 - asyncio.sleep instead of time.sleep
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,9 +22,11 @@ from datetime import datetime
 from typing import Any
 
 try:
-    import pandas as pd                                   # optional dependency guard
+    import pandas as pd  # type: ignore[import-untyped]  # optional dependency guard
+
     _HAS_PANDAS = True
 except ImportError:
+    pd = None  # type: ignore[assignment]
     _HAS_PANDAS = False
 
 # ---------------------------------------------------------------------------
@@ -54,10 +57,8 @@ async def send_notification(user_id: int, message: str) -> bool:
 
 async def notify_users_concurrent(user_ids: list[int], message: str) -> list[dict]:
     """Send notifications concurrently with asyncio.gather — no serialization."""
-    results = await asyncio.gather(
-        *[send_notification(uid, message) for uid in user_ids]
-    )
-    return [{"user_id": uid, "sent": ok} for uid, ok in zip(user_ids, results)]
+    results = await asyncio.gather(*[send_notification(uid, message) for uid in user_ids])
+    return [{"user_id": uid, "sent": ok} for uid, ok in zip(user_ids, results, strict=False)]
 
 
 async def load_profiles_concurrent(user_ids: list[int]) -> list[dict]:
@@ -120,19 +121,13 @@ def load_config(path: str) -> dict[str, Any]:
 
 def render_tag_cloud(tags: list[Any]) -> str:
     """Render tag cloud using join — no concatenation loop."""
-    return " ".join(
-        f'<a href="/tags/{tag.slug}/" class="tag">{tag.name}</a>'
-        for tag in tags
-    )
+    return " ".join(f'<a href="/tags/{tag.slug}/" class="tag">{tag.name}</a>' for tag in tags)
 
 
 def build_csv_export(posts: list[dict]) -> str:
     """Export posts as CSV using join — memory efficient."""
     header = "id,title,author,created_at"
-    rows = [
-        f'{p["id"]},"{p["title"]}",{p["author_id"]},{p["created_at"]}'
-        for p in posts
-    ]
+    rows = [f'{p["id"]},"{p["title"]}",{p["author_id"]},{p["created_at"]}' for p in posts]
     return "\n".join([header, *rows])
 
 

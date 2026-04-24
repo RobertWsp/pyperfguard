@@ -22,7 +22,7 @@ If you need a fresh mutable copy, prefer ``copy.copy()`` (shallow) or
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -67,6 +67,4 @@ class DeepcopyInLoopRule:
         if isinstance(func, ast.Attribute) and func.attr == "deepcopy":
             if isinstance(func.value, ast.Name) and func.value.id == "copy":
                 return True
-        if isinstance(func, ast.Name) and func.id == "deepcopy":
-            return True
-        return False
+        return bool(isinstance(func, ast.Name) and func.id == "deepcopy")

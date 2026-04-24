@@ -1,4 +1,5 @@
 """Tests for PKN017: @lru_cache / @cache on instance method (memory leak)."""
+
 from __future__ import annotations
 
 import ast
@@ -129,11 +130,7 @@ def test_nested_function_with_cache_not_flagged():
 
 
 def test_method_without_cache_not_flagged():
-    src = (
-        "class MyClass:\n"
-        "    def compute(self, x):\n"
-        "        return x ** 2\n"
-    )
+    src = "class MyClass:\n    def compute(self, x):\n        return x ** 2\n"
     findings = _run(src)
     assert findings == []
 

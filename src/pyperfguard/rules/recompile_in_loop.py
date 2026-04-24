@@ -18,7 +18,7 @@ cache is global and can be evicted by other code.  Compile once, reuse often.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -48,9 +48,7 @@ class RecompileInLoopRule:
             node=node,
             ctx=ctx,
             severity=self.severity,
-            fix=Fix(
-                description="Extract ``pattern = re.compile(...)`` to module/class level."
-            ),
+            fix=Fix(description="Extract ``pattern = re.compile(...)`` to module/class level."),
         )
 
     @staticmethod

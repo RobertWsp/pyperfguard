@@ -15,7 +15,7 @@ for the total work done. Python's ``str.join`` is O(n).
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix

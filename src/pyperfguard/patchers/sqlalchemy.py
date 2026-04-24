@@ -54,22 +54,18 @@ class SQLAlchemyPatcher:
             sa_event.remove(Engine, "before_cursor_execute", self._before)
             sa_event.remove(Engine, "after_cursor_execute", self._after)
             sa_event.remove(Engine, "handle_error", self._on_error)
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
         self._installed = False
 
     # ----- Event handlers --------------------------------------------------
 
-    def _before(
-        self, conn, cursor, statement, parameters, context, executemany, **_kw
-    ) -> None:
+    def _before(self, conn, cursor, statement, parameters, context, executemany, **_kw) -> None:
         if not hasattr(self._local, "pending"):
             self._local.pending = {}
         self._local.pending[id(cursor)] = time.perf_counter()
 
-    def _after(
-        self, conn, cursor, statement, parameters, context, executemany, **_kw
-    ) -> None:
+    def _after(self, conn, cursor, statement, parameters, context, executemany, **_kw) -> None:
         pending = getattr(self._local, "pending", {})
         start = pending.pop(id(cursor), None)
         duration = (time.perf_counter() - start) if start is not None else None

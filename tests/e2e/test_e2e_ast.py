@@ -4,12 +4,12 @@ Each fixture is analyzed with the full rule set loaded from entry points.
 Tests assert on the exact set of rule IDs emitted, JSON/SARIF output
 validity, filter flags, and exit-code semantics.
 """
+
 from __future__ import annotations
 
 import io
 import json
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -171,8 +171,7 @@ class TestCleanCode:
         findings = _findings("clean_code.py")
         if findings:
             details = "\n".join(
-                f"  {f.rule_id} @ line {f.location.start_line}: {f.message[:80]}"
-                for f in findings
+                f"  {f.rule_id} @ line {f.location.start_line}: {f.message[:80]}" for f in findings
             )
             pytest.fail(f"Expected zero findings, got:\n{details}")
 
@@ -193,7 +192,7 @@ class TestJsonOutput:
         JsonReporter(stream=buf).report(findings)
 
         payload = json.loads(buf.getvalue())
-        assert "version" not in payload          # compact: no schema metadata
+        assert "version" not in payload  # compact: no schema metadata
         assert "findings" in payload
         assert isinstance(payload["findings"], list)
         assert len(payload["findings"]) == len(findings)
@@ -206,11 +205,11 @@ class TestJsonOutput:
 
         payload = json.loads(buf.getvalue())
         for item in payload["findings"]:
-            assert "rule_id" in item   # rule_id preserved for compatibility
-            assert "sev" in item       # short severity code: W/E/I/H
-            assert "file" in item      # relative path
+            assert "rule_id" in item  # rule_id preserved for compatibility
+            assert "sev" in item  # short severity code: W/E/I/H
+            assert "file" in item  # relative path
             assert "line" in item
-            assert "msg" in item       # short message
+            assert "msg" in item  # short message
 
     def test_json_verbose_round_trip(self):
         """Verbose mode: full schema compatible with external tooling."""
@@ -305,9 +304,7 @@ class TestSarifOutput:
         SarifReporter(stream=buf).report(findings)
 
         doc = json.loads(buf.getvalue())
-        error_results = [
-            r for r in doc["runs"][0]["results"] if r["ruleId"] == "PKN010"
-        ]
+        error_results = [r for r in doc["runs"][0]["results"] if r["ruleId"] == "PKN010"]
         assert error_results, "Expected PKN010 results in SARIF"
         for r in error_results:
             assert r["level"] == "error"

@@ -13,9 +13,9 @@ from *different* call sites are not N+1 (they may be legitimate reuse).
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from collections.abc import Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from pyperfguard.core.finding import Finding, Location
 from pyperfguard.core.severity import Severity
@@ -58,9 +58,7 @@ class NPlusOneDetector:
             if len(events) < self.threshold:
                 continue
 
-            total_ms = sum(
-                (e.duration_s * 1000) for e in events if e.duration_s is not None
-            )
+            total_ms = sum((e.duration_s * 1000) for e in events if e.duration_s is not None)
             if total_ms < self.min_duration_ms:
                 continue
 

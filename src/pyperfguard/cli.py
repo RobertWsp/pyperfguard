@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from pyperfguard import __version__
 from pyperfguard.ast_engine.runner import analyze
@@ -32,8 +32,12 @@ def _build_parser() -> argparse.ArgumentParser:
     a.add_argument(
         "--output", "-o", type=Path, default=None, help="Write to file instead of stdout"
     )
-    a.add_argument("--select", action="append", default=None, help="Rule id prefix to include (repeatable)")
-    a.add_argument("--ignore", action="append", default=None, help="Rule id prefix to exclude (repeatable)")
+    a.add_argument(
+        "--select", action="append", default=None, help="Rule id prefix to include (repeatable)"
+    )
+    a.add_argument(
+        "--ignore", action="append", default=None, help="Rule id prefix to exclude (repeatable)"
+    )
     a.add_argument(
         "--min-severity",
         default=None,
@@ -42,7 +46,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Minimum severity to report: error, warning, info, hint (default: all)",
     )
     a.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
         help=(
             "Full output: absolute paths, complete messages, snippets, fix descriptions. "
@@ -105,8 +110,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _severity_order = {"error": 0, "warning": 1, "info": 2, "hint": 3}
             min_level = _severity_order.get(cfg.min_severity, 3)
             findings = [
-                f for f in findings
-                if _severity_order.get(f.severity.value, 3) <= min_level
+                f for f in findings if _severity_order.get(f.severity.value, 3) <= min_level
             ]
 
         reporter_cls = registry.reporter(cfg.report.format)

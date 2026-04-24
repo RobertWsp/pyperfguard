@@ -87,9 +87,10 @@ def test_scope_overflow_count_tracks_drops():
 def test_detector_runs_on_exit():
     class CountDetector:
         def evaluate(self, scope):
+            from pathlib import Path
+
             from pyperfguard.core.finding import Finding, Location
             from pyperfguard.core.severity import Severity
-            from pathlib import Path
 
             if scope.event_count() >= 2:
                 yield Finding(

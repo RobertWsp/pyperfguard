@@ -7,15 +7,15 @@ Anti-patterns present:
 - PKN012: IN clause with %s parameter binding
 - PKN013: batch.add() called inside a loop
 """
+
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
-
 
 # ---------------------------------------------------------------------------
 # Simulated cassandra-driver stubs
 # ---------------------------------------------------------------------------
+
 
 class Session:
     def execute(self, query, params=None):
@@ -44,6 +44,7 @@ class BatchType:
 # PKN010 — ALLOW FILTERING
 # ---------------------------------------------------------------------------
 
+
 class ActivityRepository:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -70,7 +71,7 @@ class ActivityRepository:
         """Search users by email domain without a secondary index."""
         cql = (
             "SELECT user_id, email FROM users "
-            "WHERE email LIKE %s ALLOW FILTERING"          # PKN010
+            "WHERE email LIKE %s ALLOW FILTERING"  # PKN010
         )
         return list(self._session.execute(cql, (f"%@{domain}",)))
 
@@ -79,6 +80,7 @@ class ActivityRepository:
 # PKN011 — session.prepare() inside a loop
 # ---------------------------------------------------------------------------
 
+
 class EventIngester:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -86,7 +88,7 @@ class EventIngester:
     def ingest_batch(self, events: list[dict]) -> None:
         """Ingest events one-by-one, preparing the same statement each time."""
         for event in events:
-            stmt = self._session.prepare(               # PKN011: prepare in loop
+            stmt = self._session.prepare(  # PKN011: prepare in loop
                 "INSERT INTO events (id, user_id, event_type, ts) "
                 "VALUES (uuid(), ?, ?, toTimestamp(now()))"
             )
@@ -95,9 +97,8 @@ class EventIngester:
     def update_counters(self, user_ids: list[UUID], delta: int) -> None:
         """Increment activity counters — prepares the statement per user."""
         for uid in user_ids:
-            prepared = self._session.prepare(           # PKN011: prepare in loop
-                "UPDATE activity_counters SET event_count = event_count + ? "
-                "WHERE user_id = ?"
+            prepared = self._session.prepare(  # PKN011: prepare in loop
+                "UPDATE activity_counters SET event_count = event_count + ? WHERE user_id = ?"
             )
             self._session.execute(prepared, (delta, uid))
 
@@ -105,6 +106,7 @@ class EventIngester:
 # ---------------------------------------------------------------------------
 # PKN012 — IN query with %s / ? binding
 # ---------------------------------------------------------------------------
+
 
 class UserLoader:
     def __init__(self, session: Session) -> None:
@@ -121,7 +123,7 @@ class UserLoader:
     def get_events_for_users(self, user_ids: list[UUID], event_type: str) -> list[dict]:
         """Multi-partition IN query on partition key."""
         rows = self._session.execute(
-            "SELECT * FROM events WHERE user_id IN %s AND event_type = %s",      # PKN012
+            "SELECT * FROM events WHERE user_id IN %s AND event_type = %s",  # PKN012
             (tuple(user_ids), event_type),
         )
         return [dict(r) for r in rows]
@@ -131,6 +133,7 @@ class UserLoader:
 # PKN013 — batch.add() inside a loop
 # ---------------------------------------------------------------------------
 
+
 class BulkWriter:
     def __init__(self, session: Session) -> None:
         self._session = session
@@ -138,16 +141,18 @@ class BulkWriter:
     def write_profile_updates(self, updates: list[dict]) -> None:
         """Apply profile updates via an UNLOGGED batch — multi-partition anti-pattern."""
         update_stmt = PreparedStatement(
-            "UPDATE user_profiles SET display_name = ?, avatar_url = ? "
-            "WHERE user_id = ?"
+            "UPDATE user_profiles SET display_name = ?, avatar_url = ? WHERE user_id = ?"
         )
         batch = BatchStatement()
-        for update in updates:                             # PKN013: batch.add in loop
-            batch.add(update_stmt, (
-                update["display_name"],
-                update["avatar_url"],
-                update["user_id"],
-            ))
+        for update in updates:  # PKN013: batch.add in loop
+            batch.add(
+                update_stmt,
+                (
+                    update["display_name"],
+                    update["avatar_url"],
+                    update["user_id"],
+                ),
+            )
         self._session.execute(batch)
 
     def archive_events(self, events: list[dict]) -> None:
@@ -157,6 +162,6 @@ class BulkWriter:
             "VALUES (?, ?, ?, toTimestamp(now()))"
         )
         batch = BatchStatement()
-        for ev in events:                                  # PKN013: batch.add in loop
+        for ev in events:  # PKN013: batch.add in loop
             batch.add(insert_stmt, (ev["user_id"], ev["id"], str(ev["payload"])))
         self._session.execute(batch)

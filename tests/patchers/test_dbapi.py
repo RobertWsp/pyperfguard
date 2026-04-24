@@ -73,6 +73,7 @@ def test_instrumented_cursor_records_to_scope(fake_module):
         cur.execute("SELECT 1")
     finally:
         from pyperfguard.runtime_engine.scope import reset_scope
+
         reset_scope(token)
 
     q_events = [e for e in scope.events() if isinstance(e, QueryEvent)]

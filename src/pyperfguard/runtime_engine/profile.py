@@ -24,9 +24,9 @@ Async usage (FastAPI handlers, async services)::
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Iterable
 
 from pyperfguard.core.finding import Finding
 from pyperfguard.runtime_engine.scope import Scope, reset_scope, set_scope

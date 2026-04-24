@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyperfguard.ast_engine.context import AstContext
@@ -55,7 +56,7 @@ class PyperfVisitor(ast.NodeVisitor):
                 for f in emitted:
                     if not self.ctx.is_suppressed(f.location.start_line, f.rule_id):
                         self.findings.append(f)
-            except Exception as exc:  # noqa: BLE001 - plugin isolation
+            except Exception as exc:
                 # A buggy rule must never abort the analysis of an entire file.
                 import sys
 

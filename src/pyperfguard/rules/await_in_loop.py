@@ -32,7 +32,7 @@ are already the correct pattern for streaming data.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -107,10 +107,7 @@ class AwaitInLoopRule:
         func = ctx.enclosing_function()
         if func is None:
             return False
-        for child in ast.walk(func):
-            if isinstance(child, ast.Yield):
-                return True
-        return False
+        return any(isinstance(child, ast.Yield) for child in ast.walk(func))
 
     @staticmethod
     def _inside_gather(ctx: AstContext) -> bool:
@@ -132,9 +129,7 @@ class AwaitInLoopRule:
         func = expr.func
         if isinstance(func, ast.Attribute) and func.attr == "sleep":
             return True
-        if isinstance(func, ast.Name) and func.id == "sleep":
-            return True
-        return False
+        return bool(isinstance(func, ast.Name) and func.id == "sleep")
 
     @staticmethod
     def _is_sequential_stream_read(expr: ast.AST, ctx: AstContext) -> bool:

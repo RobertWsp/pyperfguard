@@ -35,7 +35,7 @@ Why use a prefix (not the full stack)?
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from pyperfguard.core.finding import Finding, Location
@@ -93,9 +93,7 @@ class ExecutionGraphN1Detector:
             if len(events) < self.threshold:
                 continue
 
-            total_ms = sum(
-                (e.duration_s * 1000) for e in events if e.duration_s is not None
-            )
+            total_ms = sum((e.duration_s * 1000) for e in events if e.duration_s is not None)
             if total_ms < self.min_duration_ms:
                 continue
 
@@ -107,7 +105,7 @@ class ExecutionGraphN1Detector:
         """Hash the caller-side prefix of the stack (skip the innermost frame)."""
         # frames[0] is the deepest (the execute() call site).
         # frames[1:prefix_depth+1] are the callers — loop, service, handler, etc.
-        prefix = frames[1: self.prefix_depth + 1]
+        prefix = frames[1 : self.prefix_depth + 1]
         return hash(prefix)
 
     @staticmethod

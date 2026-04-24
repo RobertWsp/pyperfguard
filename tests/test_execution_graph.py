@@ -1,12 +1,7 @@
 """Tests for ExecutionGraphN1Detector — stack-aware cross-function N+1 detection."""
+
 from __future__ import annotations
 
-import time
-from pathlib import Path
-
-import pytest
-
-from pyperfguard.core.finding import Location
 from pyperfguard.core.severity import Severity
 from pyperfguard.detectors.execution_graph import ExecutionGraphN1Detector, _format_execution_chain
 from pyperfguard.runtime_engine.events import QueryEvent
@@ -17,7 +12,7 @@ def _make_event(fingerprint: str, stack: tuple[str, ...], duration_s: float = 0.
     return QueryEvent(
         fingerprint=fingerprint,
         db_system="cassandra",
-        statement=f"SELECT * FROM t WHERE id = ?",
+        statement="SELECT * FROM t WHERE id = ?",
         duration_s=duration_s,
         call_site=hash(stack),
         stack_frames=stack,
@@ -36,7 +31,7 @@ def test_n1_detected_above_threshold():
         "service.py:88 in get_contact",
         "router.py:12 in list_contacts",
     )
-    for i in range(5):
+    for _i in range(5):
         scope.record(_make_event("fp1", stack_prefix))
 
     detector = ExecutionGraphN1Detector(threshold=3)
@@ -48,7 +43,10 @@ def test_n1_detected_above_threshold():
 
 def test_below_threshold_not_flagged():
     scope = Scope(name="GET /x")
-    stack = ("executor.py:42 in execute", "service.py:10 in get",)
+    stack = (
+        "executor.py:42 in execute",
+        "service.py:10 in get",
+    )
     for _ in range(2):
         scope.record(_make_event("fp2", stack))
 
@@ -60,8 +58,16 @@ def test_below_threshold_not_flagged():
 def test_different_stack_prefix_not_grouped():
     """Two different handlers calling the same function — NOT N+1."""
     scope = Scope(name="batch")
-    stack_a = ("executor.py:42 in execute", "service.py:10 in get", "handler_a.py:5 in ep_a",)
-    stack_b = ("executor.py:42 in execute", "service.py:10 in get", "handler_b.py:7 in ep_b",)
+    stack_a = (
+        "executor.py:42 in execute",
+        "service.py:10 in get",
+        "handler_a.py:5 in ep_a",
+    )
+    stack_b = (
+        "executor.py:42 in execute",
+        "service.py:10 in get",
+        "handler_b.py:7 in ep_b",
+    )
     for _ in range(3):
         scope.record(_make_event("fp3", stack_a))
         scope.record(_make_event("fp3", stack_b))
@@ -77,9 +83,25 @@ def test_same_fingerprint_different_prefix_not_grouped():
     """Same query template, different call paths → separate groups."""
     scope = Scope(name="mixed")
     for _ in range(4):
-        scope.record(_make_event("fp4", ("exec.py:1 in execute", "svc.py:10 in method_a",)))
+        scope.record(
+            _make_event(
+                "fp4",
+                (
+                    "exec.py:1 in execute",
+                    "svc.py:10 in method_a",
+                ),
+            )
+        )
     for _ in range(4):
-        scope.record(_make_event("fp4", ("exec.py:1 in execute", "svc.py:20 in method_b",)))
+        scope.record(
+            _make_event(
+                "fp4",
+                (
+                    "exec.py:1 in execute",
+                    "svc.py:20 in method_b",
+                ),
+            )
+        )
 
     detector = ExecutionGraphN1Detector(threshold=3)
     findings = detector.evaluate(scope)
@@ -124,23 +146,33 @@ def test_empty_scope_no_findings():
 
 def test_db_system_filter():
     scope = Scope(name="mixed_db")
-    cass_stack = ("exec.py:1 in execute", "svc.py:5 in fn",)
-    sql_stack = ("sql.py:1 in execute", "svc.py:5 in fn",)
+    cass_stack = (
+        "exec.py:1 in execute",
+        "svc.py:5 in fn",
+    )
+    sql_stack = (
+        "sql.py:1 in execute",
+        "svc.py:5 in fn",
+    )
 
     for _ in range(5):
-        scope.record(QueryEvent(
-            fingerprint="cass_fp",
-            db_system="cassandra",
-            statement="SELECT ...",
-            stack_frames=cass_stack,
-        ))
+        scope.record(
+            QueryEvent(
+                fingerprint="cass_fp",
+                db_system="cassandra",
+                statement="SELECT ...",
+                stack_frames=cass_stack,
+            )
+        )
     for _ in range(5):
-        scope.record(QueryEvent(
-            fingerprint="sql_fp",
-            db_system="postgresql",
-            statement="SELECT ...",
-            stack_frames=sql_stack,
-        ))
+        scope.record(
+            QueryEvent(
+                fingerprint="sql_fp",
+                db_system="postgresql",
+                statement="SELECT ...",
+                stack_frames=sql_stack,
+            )
+        )
 
     detector = ExecutionGraphN1Detector(threshold=3, db_systems=frozenset({"cassandra"}))
     findings = detector.evaluate(scope)

@@ -39,6 +39,7 @@ def test_finder_patches_module_when_imported_after_register(finder):
     p = _RecordingPatcher(target)
     finder.register(p)
     import html.parser  # noqa: F401  (triggers the finder)
+
     assert len(p.installed) == 1
     assert getattr(sys.modules[target], "__pyperfguard_patched__", False) is True
 
@@ -46,6 +47,7 @@ def test_finder_patches_module_when_imported_after_register(finder):
 def test_finder_patches_module_already_imported(finder):
     # html should already be imported by pytest itself.
     import html  # noqa: F401
+
     assert "html" in sys.modules
     p = _RecordingPatcher("html")
     finder.register(p)
@@ -54,6 +56,7 @@ def test_finder_patches_module_already_imported(finder):
 
 def test_unregister_calls_uninstall(finder):
     import html  # noqa: F401
+
     p = _RecordingPatcher("html")
     finder.register(p)
     finder.unregister("html")

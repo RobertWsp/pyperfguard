@@ -43,9 +43,9 @@ from __future__ import annotations
 
 import ast
 from collections import defaultdict, deque
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -57,9 +57,9 @@ from pyperfguard.core.severity import Severity
 _DB_CALL_PATTERNS: frozenset[str] = frozenset(
     {
         # Cassandra — very specific names
-        "execute",         # session.execute() — requires receiver check
-        "execute_async",   # session.execute_async()
-        "prepare",         # session.prepare() — requires receiver check
+        "execute",  # session.execute() — requires receiver check
+        "execute_async",  # session.execute_async()
+        "prepare",  # session.prepare() — requires receiver check
         # SQLAlchemy — specific enough, always on a session/connection
         "scalar",
         "scalars",
@@ -97,7 +97,7 @@ _DB_RECEIVER_HINTS: frozenset[str] = frozenset(
         "_connection",
         "redis",
         "_redis",
-        "pool",        # asyncpg pool.fetch() / pool.execute()
+        "pool",  # asyncpg pool.fetch() / pool.execute()
         "_pool",
         # Django ORM: Model.objects.filter() — "objects" is the Manager attribute
         "objects",
@@ -110,7 +110,12 @@ _DB_RECEIVER_HINTS: frozenset[str] = frozenset(
 # conventions used in production code that are not covered by the exact-match
 # set above.
 _DB_RECEIVER_SUFFIXES: tuple[str, ...] = (
-    "_conn", "_connection", "_session", "_executor", "_db", "_cursor",
+    "_conn",
+    "_connection",
+    "_session",
+    "_executor",
+    "_db",
+    "_cursor",
 )
 
 
@@ -129,9 +134,9 @@ def _is_db_receiver(name: str) -> bool:
     if name.endswith("_set") and len(name) > 4:
         return True
     return any(
-        name.endswith(suffix) and len(name) > len(suffix)
-        for suffix in _DB_RECEIVER_SUFFIXES
+        name.endswith(suffix) and len(name) > len(suffix) for suffix in _DB_RECEIVER_SUFFIXES
     )
+
 
 # ── False-positive suppression heuristics ────────────────────────────────────
 
@@ -143,7 +148,7 @@ def _is_db_receiver(name: str) -> bool:
 #
 # INDIRECT calls (loop calls a helper that itself does DB work): we apply a
 # LARGER threshold because schema-init loops like ``ensure_columns()`` can iterate
-# over 10–15 column definitions, all string constants, and are never user-driven.
+# over 10-15 column definitions, all string constants, and are never user-driven.
 _MAX_SMALL_N_DIRECT: int = 5
 _MAX_SMALL_N_INDIRECT: int = 20
 
@@ -153,62 +158,69 @@ _MAX_SMALL_N_INDIRECT: int = 20
 # typically zero (they run as offline jobs, not in the request path).
 _BACKGROUND_FN_FRAGMENTS: frozenset[str] = frozenset(
     {
-        "cleanup", "clean_up",
-        "backfill", "back_fill",
-        "migrate", "migration",
-        "repair", "fix",
-        "sync", "synchronize",
-        "purge", "prune",
-        "rebuild", "reindex",
+        "cleanup",
+        "clean_up",
+        "backfill",
+        "back_fill",
+        "migrate",
+        "migration",
+        "repair",
+        "fix",
+        "sync",
+        "synchronize",
+        "purge",
+        "prune",
+        "rebuild",
+        "reindex",
         "reconcile",
         "archive",
         "batch",
         "reprocess",
         "populate",
         # Schema / DDL setup — runs at startup, never in the request path
-        "ensure",       # ensure_columns, ensure_table — schema drift correction
-        "schema",       # schema-related management functions
-        "tables",       # create_tables, _init_tables, drop_tables — DDL management
-        "drop",         # drop_views, drop_tables — DDL teardown
-        "truncate",     # truncate_tables, truncate_all_models — DDL/test cleanup
-        "invalidate",   # cache_invalidate_pattern — N Redis DELETEs is expected
-        "provision",    # infrastructure provisioning
-        "bootstrap",    # one-shot startup initialisation
-        "seed",         # data seeding
+        "ensure",  # ensure_columns, ensure_table — schema drift correction
+        "schema",  # schema-related management functions
+        "tables",  # create_tables, _init_tables, drop_tables — DDL management
+        "drop",  # drop_views, drop_tables — DDL teardown
+        "truncate",  # truncate_tables, truncate_all_models — DDL/test cleanup
+        "invalidate",  # cache_invalidate_pattern — N Redis DELETEs is expected
+        "provision",  # infrastructure provisioning
+        "bootstrap",  # one-shot startup initialisation
+        "seed",  # data seeding
         # Intentional bulk / batch operations — N I/Os by design, not accidental
-        "bulk",         # bulk_create, bulk_update, bulk_import — batch semantics
-        "many",         # execute_many, save_many, insert_many — batch semantics
+        "bulk",  # bulk_create, bulk_update, bulk_import — batch semantics
+        "many",  # execute_many, save_many, insert_many — batch semantics
         # Test, fixture, and assertion helpers — never in production request path
-        "test",         # test_* / *_test functions in test suites
-        "testing",      # _prep_testing_database, testing_* helpers
-        "fixture",      # load_fixtures, setup_fixture — test data setup
-        "teardown",     # test teardown helpers (r_teardown, teardown_db, ...)
-        "assert",       # _assert_writes_succeed — test assertion helpers
-        "verify",       # verify_insert_select, verify_schema — test verification
-        "benchmark",    # benchmark_* / run_benchmark — perf measurement, not prod
+        "test",  # test_* / *_test functions in test suites
+        "testing",  # _prep_testing_database, testing_* helpers
+        "fixture",  # load_fixtures, setup_fixture — test data setup
+        "teardown",  # test teardown helpers (r_teardown, teardown_db, ...)
+        "assert",  # _assert_writes_succeed — test assertion helpers
+        "verify",  # verify_insert_select, verify_schema — test verification
+        "benchmark",  # benchmark_* / run_benchmark — perf measurement, not prod
         # Distributed system routing — per-shard/slot ops are protocol-required
-        "shard",        # ssubscribe / per-shard routing — not user-data-driven
-        "slot",         # _split_command_across_slots — cluster topology routing
-        "nonatomic",    # mset_nonatomic — intentionally non-transactional multi-key
-        "partition",    # _partition_keys_by_slot — key→slot partitioning
-        "across",       # _split_command_across_slots — slot-partitioned fan-out
+        "shard",  # ssubscribe / per-shard routing — not user-data-driven
+        "slot",  # _split_command_across_slots — cluster topology routing
+        "nonatomic",  # mset_nonatomic — intentionally non-transactional multi-key
+        "partition",  # _partition_keys_by_slot — key→slot partitioning
+        "across",  # _split_command_across_slots — slot-partitioned fan-out
         # Startup / connection setup — runs once per process, not per request
-        "bake",         # _bake() — GINO bakes prepared queries at connection time
-        "mixin",        # _init_mixin() — connection/dialect initialisation mixin
-        "check",        # check_connection() — health checks, validation on open
-        "serve",        # serve() — startup server functions (CLI entrypoints)
+        "bake",  # _bake() — GINO bakes prepared queries at connection time
+        "mixin",  # _init_mixin() — connection/dialect initialisation mixin
+        "check",  # check_connection() — health checks, validation on open
+        "serve",  # serve() — startup server functions (CLI entrypoints)
         # Cluster / topology management — background infrastructure work
         "maintenance",  # handle_oss_maintenance_notification — cluster topology
-        "reconnect",    # mark_for_reconnect — connection pool management
-        "handoff",      # record_connection_handoff — cluster failover
+        "reconnect",  # mark_for_reconnect — connection pool management
+        "handoff",  # record_connection_handoff — cluster failover
         # Bulk / streaming data operations — intentional N I/Os, not accidental
-        "chunk",        # insert_chunk(), process_chunk() — batch I/O by design
-        "dump",         # iterdump(), export_dump() — serialisation to file/stream
-        "refresh",      # _refresh_schemas(), refresh_cache() — background resync
-        "convert",      # _convert_multi() — data type conversion (offline)
-        "transform",    # transform() DDL table rebuild — SQLite/schema migration
-        "analyze",      # analyze_column(), _analyze() — stats collection
-        "export",       # export_archived_records() — data export operations
+        "chunk",  # insert_chunk(), process_chunk() — batch I/O by design
+        "dump",  # iterdump(), export_dump() — serialisation to file/stream
+        "refresh",  # _refresh_schemas(), refresh_cache() — background resync
+        "convert",  # _convert_multi() — data type conversion (offline)
+        "transform",  # transform() DDL table rebuild — SQLite/schema migration
+        "analyze",  # analyze_column(), _analyze() — stats collection
+        "export",  # export_archived_records() — data export operations
     }
 )
 
@@ -218,18 +230,30 @@ _BACKGROUND_FN_FRAGMENTS: frozenset[str] = frozenset(
 # latency impact is zero.
 _BACKGROUND_PATH_FRAGMENTS: frozenset[str] = frozenset(
     {
-        "/benchmarks/", "/benchmark/", "/bench/",
-        "/examples/", "/example/",
-        "/doctests/", "/doctest/",
-        "/demos/", "/demo/",
-        "/perf/", "/performance/", "/profiling/",
-        "/load_test/", "/load_tests/",
+        "/benchmarks/",
+        "/benchmark/",
+        "/bench/",
+        "/examples/",
+        "/example/",
+        "/doctests/",
+        "/doctest/",
+        "/demos/",
+        "/demo/",
+        "/perf/",
+        "/performance/",
+        "/profiling/",
+        "/load_test/",
+        "/load_tests/",
         # Test directories — never production request-path code
-        "/tests/", "/test/", "/testing/",
+        "/tests/",
+        "/test/",
+        "/testing/",
         # Common test config / support files
         "conftest.py",
         # Standalone example / demo / sample files (e.g. example_core.py)
-        "example_", "demo_", "sample_",
+        "example_",
+        "demo_",
+        "sample_",
         # Django database migrations — one-time data operations, not request-path
         "/migrations/",
     }
@@ -249,24 +273,58 @@ _BACKGROUND_PATH_FRAGMENTS: frozenset[str] = frozenset(
 _BUILTIN_BARE_CALL_NAMES: frozenset[str] = frozenset(
     {
         # type system / identity
-        "type", "isinstance", "issubclass", "id", "hash",
+        "type",
+        "isinstance",
+        "issubclass",
+        "id",
+        "hash",
         # containers
-        "list", "dict", "set", "frozenset", "tuple",
-        "range", "enumerate", "zip", "reversed", "sorted",
-        "filter", "map", "iter", "next",
+        "list",
+        "dict",
+        "set",
+        "frozenset",
+        "tuple",
+        "range",
+        "enumerate",
+        "zip",
+        "reversed",
+        "sorted",
+        "filter",
+        "map",
+        "iter",
+        "next",
         # Boolean tests — "all" / "any" are Python builtins, never DB calls.
         # They must be guarded here because ORM libraries (Cassandra cqlengine,
         # Django) define Model.all() / Model.any() methods that call execute().
         # BFS propagates db_adjacent to the name "all", so bare all(generator)
         # in a loop would otherwise be falsely flagged as an indirect N+1.
-        "all", "any",
+        "all",
+        "any",
         # arithmetic / numeric
-        "len", "abs", "round", "min", "max", "sum", "pow",
-        "int", "float", "bool", "str", "bytes", "bytearray",
+        "len",
+        "abs",
+        "round",
+        "min",
+        "max",
+        "sum",
+        "pow",
+        "int",
+        "float",
+        "bool",
+        "str",
+        "bytes",
+        "bytearray",
         # I/O helpers — not DB
-        "print", "repr", "vars", "dir",
+        "print",
+        "repr",
+        "vars",
+        "dir",
         # conversion
-        "ord", "chr", "hex", "oct", "bin",
+        "ord",
+        "chr",
+        "hex",
+        "oct",
+        "bin",
     }
 )
 
@@ -280,22 +338,62 @@ _BUILTIN_BARE_CALL_NAMES: frozenset[str] = frozenset(
 _PURE_PYTHON_METHODS: frozenset[str] = frozenset(
     {
         # dict / mapping
-        "get", "set", "setdefault", "pop", "popitem", "update", "clear",
-        "copy", "items", "keys", "values",
+        "get",
+        "set",
+        "setdefault",
+        "pop",
+        "popitem",
+        "update",
+        "clear",
+        "copy",
+        "items",
+        "keys",
+        "values",
         # list
-        "append", "extend", "insert", "remove", "reverse", "sort",
-        "count", "index",
+        "append",
+        "extend",
+        "insert",
+        "remove",
+        "reverse",
+        "sort",
+        "count",
+        "index",
         # set
-        "add", "discard", "issubset", "issuperset", "union",
-        "intersection", "difference",
+        "add",
+        "discard",
+        "issubset",
+        "issuperset",
+        "union",
+        "intersection",
+        "difference",
         # string
-        "encode", "decode", "strip", "lstrip", "rstrip", "split", "rsplit",
-        "join", "format", "replace", "startswith", "endswith",
-        "upper", "lower", "isoformat", "fromisoformat",
+        "encode",
+        "decode",
+        "strip",
+        "lstrip",
+        "rstrip",
+        "split",
+        "rsplit",
+        "join",
+        "format",
+        "replace",
+        "startswith",
+        "endswith",
+        "upper",
+        "lower",
+        "isoformat",
+        "fromisoformat",
         # Pydantic / dataclass serialisation — never network I/O
-        "model_dump", "model_validate",
+        "model_dump",
+        "model_validate",
         # logging — never DB
-        "warning", "info", "debug", "error", "critical", "warn", "log",
+        "warning",
+        "info",
+        "debug",
+        "error",
+        "critical",
+        "warn",
+        "log",
     }
 )
 
@@ -305,9 +403,20 @@ _PURE_PYTHON_METHODS: frozenset[str] = frozenset(
 # real DB write, not a dict.update()).
 _SERVICE_RECEIVER_PATTERNS: frozenset[str] = frozenset(
     {
-        "service", "svc", "repo", "repository", "manager", "store",
-        "client", "dao", "gateway", "adapter", "backend", "registry",
-        "handler", "provider",
+        "service",
+        "svc",
+        "repo",
+        "repository",
+        "manager",
+        "store",
+        "client",
+        "dao",
+        "gateway",
+        "adapter",
+        "backend",
+        "registry",
+        "handler",
+        "provider",
     }
 )
 
@@ -318,9 +427,13 @@ _SERVICE_RECEIVER_PATTERNS: frozenset[str] = frozenset(
 # execute() outside the loop.
 _PIPELINE_RECEIVERS: frozenset[str] = frozenset(
     {
-        "pipe", "pipeline",
-        "batch", "batch_stmt",
-        "tx", "multi", "transaction",
+        "pipe",
+        "pipeline",
+        "batch",
+        "batch_stmt",
+        "tx",
+        "multi",
+        "transaction",
     }
 )
 
@@ -334,19 +447,46 @@ _PIPELINE_RECEIVERS: frozenset[str] = frozenset(
 #   for pragma, val in self.pragmas.items(): conn.execute(PRAGMA)   ← Tortoise
 _CONFIG_SELF_ATTRS: frozenset[str] = frozenset(
     {
-        "extensions", "pragmas", "settings", "config",
-        "options", "params", "defaults",
-        "backends", "plugins", "middleware", "middlewares",
-        "handlers", "validators", "converters", "processors",
-        "interceptors", "listeners", "hooks", "filters",
-        "columns", "indexes", "constraints", "fields",
-        "serializers", "deserializers", "encoders", "decoders",
-        "ddl", "ddl_statements", "statements",  # DDL schema management
+        "extensions",
+        "pragmas",
+        "settings",
+        "config",
+        "options",
+        "params",
+        "defaults",
+        "backends",
+        "plugins",
+        "middleware",
+        "middlewares",
+        "handlers",
+        "validators",
+        "converters",
+        "processors",
+        "interceptors",
+        "listeners",
+        "hooks",
+        "filters",
+        "columns",
+        "indexes",
+        "constraints",
+        "fields",
+        "serializers",
+        "deserializers",
+        "encoders",
+        "decoders",
+        "ddl",
+        "ddl_statements",
+        "statements",  # DDL schema management
         # ORM mapper / schema attributes — loops over these iterate over
         # the *class hierarchy* or *table schema*, not user-data rows.
         # SQLAlchemy: base_mapper._sorted_tables, mapper._pks_by_table, etc.
-        "tables", "sorted_tables", "mappers", "mapper",
-        "bases", "subclasses", "hierarchy",
+        "tables",
+        "sorted_tables",
+        "mappers",
+        "mapper",
+        "bases",
+        "subclasses",
+        "hierarchy",
     }
 )
 
@@ -405,21 +545,32 @@ def _called_names(fn_node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
 # "get"        — QuerySet.get() / Model.objects.get() = SELECT per call; dict.get() guarded via
 #                _PURE_PYTHON_METHODS in the indirect path and non-DB receiver in direct path.
 # "create"     — Model.objects.create() = INSERT per call; factory.create() guarded by receiver.
-_RECEIVER_REQUIRED = frozenset({
-    "execute", "exec", "prepare",
-    "scalar", "scalars", "fetchall", "fetchone",
-    "fetch", "fetchrow", "fetchval",       # asyncpg
-    "commit",                              # N commits in loop — should be 1 outside
-    "hget",                                # Redis HGET (single field) — requires connection receiver
-    # Django ORM methods (need "objects" manager or "_set" reverse-FK receiver)
-    "filter", "exclude",                   # SELECT WHERE / SELECT WHERE NOT
-    "all",                                 # SELECT *
-    "count",                               # SELECT COUNT
-    "values", "values_list",               # SELECT (as dict / as list)
-    "delete",                              # DELETE — N deletes per row in loop
-    "get",                                 # SELECT (single) — N selects in loop
-    "create",                              # INSERT — N inserts in loop
-})
+_RECEIVER_REQUIRED = frozenset(
+    {
+        "execute",
+        "exec",
+        "prepare",
+        "scalar",
+        "scalars",
+        "fetchall",
+        "fetchone",
+        "fetch",
+        "fetchrow",
+        "fetchval",  # asyncpg
+        "commit",  # N commits in loop — should be 1 outside
+        "hget",  # Redis HGET (single field) — requires connection receiver
+        # Django ORM methods (need "objects" manager or "_set" reverse-FK receiver)
+        "filter",
+        "exclude",  # SELECT WHERE / SELECT WHERE NOT
+        "all",  # SELECT *
+        "count",  # SELECT COUNT
+        "values",
+        "values_list",  # SELECT (as dict / as list)
+        "delete",  # DELETE — N deletes per row in loop
+        "get",  # SELECT (single) — N selects in loop
+        "create",  # INSERT — N inserts in loop
+    }
+)
 # ORM methods where the receiver IS the data carrier (the loop variable appears
 # in the receiver chain, not in the arguments).
 #
@@ -437,31 +588,52 @@ _RECEIVER_REQUIRED = frozenset({
 #     for sentinel in sentinels:
 #         sentinel.execute_command(cmd)  # fan-out — NOT an accidental N+1
 #
-_ORM_RECEIVER_METHODS: frozenset[str] = frozenset({
-    # Django QuerySet methods (receiver is manager or reverse-FK manager)
-    "filter", "exclude", "all", "count", "values", "values_list",
-    "delete", "get", "create",
-    # High-level ORM methods (always-DB, receiver is model instance or manager)
-    "fetch_related", "prefetch_related", "get_or_create", "update_or_create",
-    "fetch_link", "fetch_all_links",
-})
+_ORM_RECEIVER_METHODS: frozenset[str] = frozenset(
+    {
+        # Django QuerySet methods (receiver is manager or reverse-FK manager)
+        "filter",
+        "exclude",
+        "all",
+        "count",
+        "values",
+        "values_list",
+        "delete",
+        "get",
+        "create",
+        # High-level ORM methods (always-DB, receiver is model instance or manager)
+        "fetch_related",
+        "prefetch_related",
+        "get_or_create",
+        "update_or_create",
+        "fetch_link",
+        "fetch_all_links",
+    }
+)
 
 # Methods that are always DB-specific regardless of receiver name.
 _ALWAYS_DB = frozenset(
     {
-        "execute_async", "find_one", "insert_one", "insert_many",
-        "update_one", "update_many", "delete_one", "delete_many",
-        "bulk_write", "execute_command", "execute_concurrent",
+        "execute_async",
+        "find_one",
+        "insert_one",
+        "insert_many",
+        "update_one",
+        "update_many",
+        "delete_one",
+        "delete_many",
+        "bulk_write",
+        "execute_command",
+        "execute_concurrent",
         "execute_concurrent_with_args",
         # Redis hash operations — specific enough to never collide with Python builtins
-        "hgetall",      # HGETALL — fetch all fields of a Redis hash (RQ, Celery backends)
+        "hgetall",  # HGETALL — fetch all fields of a Redis hash (RQ, Celery backends)
         # High-level ORM methods (specific enough, rarely collide with generic Python APIs)
-        "fetch_related",      # Tortoise ORM: await obj.fetch_related("field")
-        "prefetch_related",   # Django ORM: QuerySet.prefetch_related() — triggers extra queries
-        "get_or_create",      # Django/Tortoise: SELECT + optional INSERT per call
-        "update_or_create",   # Django: SELECT + INSERT or UPDATE per call
-        "fetch_link",         # Beanie ODM: await obj.fetch_link("field")
-        "fetch_all_links",    # Beanie ODM: await obj.fetch_all_links()
+        "fetch_related",  # Tortoise ORM: await obj.fetch_related("field")
+        "prefetch_related",  # Django ORM: QuerySet.prefetch_related() — triggers extra queries
+        "get_or_create",  # Django/Tortoise: SELECT + optional INSERT per call
+        "update_or_create",  # Django: SELECT + INSERT or UPDATE per call
+        "fetch_link",  # Beanie ODM: await obj.fetch_link("field")
+        "fetch_all_links",  # Beanie ODM: await obj.fetch_all_links()
     }
 )
 
@@ -490,8 +662,7 @@ def _is_direct_db_call(node: ast.Call) -> bool:
         if isinstance(receiver, ast.Attribute):
             # self._executor.execute, self._listener_conn.execute, etc.
             return _is_db_receiver(receiver.attr) or (
-                isinstance(receiver.value, ast.Name)
-                and _is_db_receiver(receiver.value.id)
+                isinstance(receiver.value, ast.Name) and _is_db_receiver(receiver.value.id)
             )
     return False
 
@@ -510,10 +681,17 @@ def _is_direct_db_call(node: ast.Call) -> bool:
 #  filter(kw=…)   — kwargs-only: Python's filter(fn, it) always has 2 positional args
 #  exclude(kw=…)  — kwargs-only: no Python stdlib equivalent
 #  count()        — no args: list.count(value) always has 1 arg
-_DJANGO_RELATED_MANAGER_METHODS: frozenset[str] = frozenset({
-    "all", "values_list", "select_related", "select_for_update",
-    "filter", "exclude", "count",
-})
+_DJANGO_RELATED_MANAGER_METHODS: frozenset[str] = frozenset(
+    {
+        "all",
+        "values_list",
+        "select_related",
+        "select_for_update",
+        "filter",
+        "exclude",
+        "count",
+    }
+)
 
 
 # Django/ORM instance methods that mutate or refresh a single object.
@@ -521,12 +699,14 @@ _DJANGO_RELATED_MANAGER_METHODS: frozenset[str] = frozenset({
 # ``obj`` is the loop variable — each iteration issues a separate DB round-trip.
 # ``save`` and ``delete`` are generic enough that we require the receiver to be
 # a plain Name that matches a loop variable (not ``form.save()`` on a non-loop var).
-_ORM_INSTANCE_MUTATION_METHODS: frozenset[str] = frozenset({
-    "save",
-    "delete",
-    "refresh_from_db",  # Django: re-fetches the object from the database
-    "full_clean",       # Django: validation + DB read — costly per-instance
-})
+_ORM_INSTANCE_MUTATION_METHODS: frozenset[str] = frozenset(
+    {
+        "save",
+        "delete",
+        "refresh_from_db",  # Django: re-fetches the object from the database
+        "full_clean",  # Django: validation + DB read — costly per-instance
+    }
+)
 
 
 def _is_orm_instance_mutation(node: ast.Call) -> bool:
@@ -576,9 +756,7 @@ def _is_django_related_manager_call(node: ast.Call) -> bool:
     if method in ("all", "count") and (node.args or node.keywords):
         return False
     # filter() and exclude() must use kwargs only — Python's filter(fn, it) has positional args
-    if method in ("filter", "exclude") and node.args:
-        return False
-    return True
+    return not (method in ("filter", "exclude") and node.args)
 
 
 class CallGraph:
@@ -690,7 +868,8 @@ class CallGraph:
 
                 # Recurse into the function body with this function's params added.
                 own_params = frozenset(
-                    a.arg for a in (
+                    a.arg
+                    for a in (
                         node.args.args
                         + node.args.posonlyargs
                         + node.args.kwonlyargs
@@ -738,10 +917,7 @@ class CallGraph:
         queue: deque[str] = deque(
             name
             for name, infos in self._functions.items()
-            if any(
-                i.is_db_adjacent and not _is_background_path(i.module_path)
-                for i in infos
-            )
+            if any(i.is_db_adjacent and not _is_background_path(i.module_path) for i in infos)
         )
         visited: set[str] = set(queue)
 
@@ -834,10 +1010,9 @@ class CallGraph:
                     for iter_node in ast.walk(stmt.iter):
                         if not isinstance(iter_node, ast.Call):
                             continue
-                        is_iter_db = (
-                            _is_direct_db_call(iter_node)
-                            or _is_django_related_manager_call(iter_node)
-                        )
+                        is_iter_db = _is_direct_db_call(
+                            iter_node
+                        ) or _is_django_related_manager_call(iter_node)
                         if not is_iter_db:
                             continue
                         if loop_vars and not (
@@ -913,10 +1088,7 @@ class CallGraph:
                         continue
                     if loop_vars:
                         receiver = node.func.value  # type: ignore[union-attr]
-                        if not (
-                            isinstance(receiver, ast.Name)
-                            and receiver.id in loop_vars
-                        ):
+                        if not (isinstance(receiver, ast.Name) and receiver.id in loop_vars):
                             continue
                     callee = self._callee_name(node) or "save"
                     yield self._make_finding(loop, node, callee, fn_info, severity)
@@ -942,10 +1114,7 @@ class CallGraph:
                     # Example: visit_binary_product(fn, expr) defines a nested
                     # visit() that calls fn(l, r) in a loop — ``fn`` is a
                     # closure parameter, not a global DB function.
-                    if (
-                        isinstance(node.func, ast.Name)
-                        and node.func.id in fn_info.ancestor_params
-                    ):
+                    if isinstance(node.func, ast.Name) and node.func.id in fn_info.ancestor_params:
                         continue
                     # ── Built-in bare-call guard ────────────────────────────
                     # Libraries like redis-py define methods named ``range``,
@@ -957,10 +1126,7 @@ class CallGraph:
                     # positive.  Guard: if the call is a bare ``ast.Name``
                     # (no receiver) and the name is a known Python built-in,
                     # skip — the built-in cannot be a DB operation.
-                    if (
-                        isinstance(node.func, ast.Name)
-                        and node.func.id in _BUILTIN_BARE_CALL_NAMES
-                    ):
+                    if isinstance(node.func, ast.Name) and node.func.id in _BUILTIN_BARE_CALL_NAMES:
                         continue
                     # ── Fan-out routing guard ──────────────────────────────
                     # ``fn.name == callee`` with a non-self receiver means this
@@ -976,8 +1142,7 @@ class CallGraph:
                         callee == fn_info.name
                         and isinstance(node.func, ast.Attribute)
                         and not (
-                            isinstance(node.func.value, ast.Name)
-                            and node.func.value.id == "self"
+                            isinstance(node.func.value, ast.Name) and node.func.value.id == "self"
                         )
                     ):
                         continue
@@ -1003,12 +1168,11 @@ class CallGraph:
                         and node.func.value.id == "self"
                     ):
                         local_versions = [
-                            i for i in self._functions.get(callee, [])
+                            i
+                            for i in self._functions.get(callee, [])
                             if i.module_path == fn_info.module_path
                         ]
-                        if local_versions and not any(
-                            i.is_db_adjacent for i in local_versions
-                        ):
+                        if local_versions and not any(i.is_db_adjacent for i in local_versions):
                             continue  # local version is not DB — suppress
                     # Suppress if this looks like a built-in Python method on a
                     # non-service receiver (e.g. dict.get(), set.update(),
@@ -1105,9 +1269,7 @@ class CallGraph:
     ) -> Finding:
         loop_type = "async for" if isinstance(loop, ast.AsyncFor) else "for"
         severity_hint = (
-            " (background operation — lower priority)"
-            if severity == Severity.INFO
-            else ""
+            " (background operation — lower priority)" if severity == Severity.INFO else ""
         )
         bg_tag = " [background]" if severity == Severity.INFO else ""
         return Finding.from_node(
@@ -1118,9 +1280,7 @@ class CallGraph:
                 "accesses a database. Each iteration may issue a separate query. "
                 f"Consider batching or restructuring the loop.{severity_hint}"
             ),
-            short_message=(
-                f"N+1 in {fn_info.name}: {callee}() per {loop_type}-loop iter{bg_tag}"
-            ),
+            short_message=(f"N+1 in {fn_info.name}: {callee}() per {loop_type}-loop iter{bg_tag}"),
             node=loop,
             ctx=AstContext(
                 path=fn_info.module_path,
@@ -1136,9 +1296,7 @@ class CallGraph:
             ),
         )
 
-    def _check_while_loop(
-        self, loop: ast.While, fn_info: _FunctionInfo
-    ) -> Iterable[Finding]:
+    def _check_while_loop(self, loop: ast.While, fn_info: _FunctionInfo) -> Iterable[Finding]:
         """Detect N+1 inside ``while True`` consumer loops (Kafka, MQTT, IoT).
 
         Pattern::
@@ -1193,22 +1351,15 @@ class CallGraph:
                     return
                 callee = self._callee_name(node)
                 if callee and self._is_directly_db_adjacent(callee):
-                    if (
-                        isinstance(node.func, ast.Name)
-                        and node.func.id in fn_info.ancestor_params
-                    ):
+                    if isinstance(node.func, ast.Name) and node.func.id in fn_info.ancestor_params:
                         continue
-                    if (
-                        isinstance(node.func, ast.Name)
-                        and node.func.id in _BUILTIN_BARE_CALL_NAMES
-                    ):
+                    if isinstance(node.func, ast.Name) and node.func.id in _BUILTIN_BARE_CALL_NAMES:
                         continue
                     if (
                         callee == fn_info.name
                         and isinstance(node.func, ast.Attribute)
                         and not (
-                            isinstance(node.func.value, ast.Name)
-                            and node.func.value.id == "self"
+                            isinstance(node.func.value, ast.Name) and node.func.value.id == "self"
                         )
                     ):
                         continue
@@ -1218,7 +1369,8 @@ class CallGraph:
                         and node.func.value.id == "self"
                     ):
                         local_versions = [
-                            i for i in self._functions.get(callee, [])
+                            i
+                            for i in self._functions.get(callee, [])
                             if i.module_path == fn_info.module_path
                         ]
                         if local_versions and not any(i.is_db_adjacent for i in local_versions):
@@ -1237,9 +1389,7 @@ class CallGraph:
         severity: Severity = Severity.WARNING,
     ) -> Finding:
         severity_hint = (
-            " (background operation — lower priority)"
-            if severity == Severity.INFO
-            else ""
+            " (background operation — lower priority)" if severity == Severity.INFO else ""
         )
         bg_tag = " [background]" if severity == Severity.INFO else ""
         return Finding.from_node(
@@ -1251,9 +1401,7 @@ class CallGraph:
                 "may issue a separate query. Consider accumulating messages "
                 f"in a buffer and batch-querying.{severity_hint}"
             ),
-            short_message=(
-                f"N+1 in {fn_info.name}: while-loop calls {callee}() per event{bg_tag}"
-            ),
+            short_message=(f"N+1 in {fn_info.name}: while-loop calls {callee}() per event{bg_tag}"),
             node=loop,
             ctx=AstContext(
                 path=fn_info.module_path,
@@ -1312,15 +1460,16 @@ class CallGraph:
                 if isinstance(source, tuple):
                     fn_name, iter_expr = source
                     if _is_constant_n_iter(
-                        iter_expr, fn_info.node,
-                        max_n=_MAX_SMALL_N_DIRECT, module_consts=mod_consts,
+                        iter_expr,
+                        fn_info.node,
+                        max_n=_MAX_SMALL_N_DIRECT,
+                        module_consts=mod_consts,
                     ):
                         continue
                     if fn_name in _BUILTIN_BARE_CALL_NAMES:
                         continue
-                    is_adj = (
-                        self._is_directly_db_adjacent(fn_name)
-                        or self._is_db_adjacent_name(fn_name)
+                    is_adj = self._is_directly_db_adjacent(fn_name) or self._is_db_adjacent_name(
+                        fn_name
                     )
                     if is_adj and fn_name not in _PURE_PYTHON_METHODS:
                         yield self._make_gather_finding(node, fn_name, fn_info)
@@ -1332,8 +1481,10 @@ class CallGraph:
                     continue
                 gen = comp.generators[0]
                 if _is_constant_n_iter(
-                    gen.iter, fn_info.node,
-                    max_n=_MAX_SMALL_N_DIRECT, module_consts=mod_consts,
+                    gen.iter,
+                    fn_info.node,
+                    max_n=_MAX_SMALL_N_DIRECT,
+                    module_consts=mod_consts,
                 ):
                     continue
 
@@ -1410,7 +1561,6 @@ class CallGraph:
             ),
         )
 
-
     def _check_await_listcomp_in_stmt(
         self,
         stmt: ast.stmt,
@@ -1447,8 +1597,10 @@ class CallGraph:
 
             gen = comp.generators[0]
             if _is_constant_n_iter(
-                gen.iter, fn_info.node,
-                max_n=_MAX_SMALL_N_DIRECT, module_consts=mod_consts,
+                gen.iter,
+                fn_info.node,
+                max_n=_MAX_SMALL_N_DIRECT,
+                module_consts=mod_consts,
             ):
                 continue
 
@@ -1517,12 +1669,7 @@ class CallGraph:
             else:
                 continue
 
-            if is_concurrent:
-                severity = Severity.INFO
-            elif background:
-                severity = Severity.INFO
-            else:
-                severity = Severity.WARNING
+            severity = Severity.INFO if is_concurrent or background else Severity.WARNING
 
             yield self._make_await_listcomp_finding(
                 comp, callee, fn_info, severity, is_concurrent=is_concurrent
@@ -1549,9 +1696,7 @@ class CallGraph:
             )
         else:
             severity_hint = (
-                " (background operation — lower priority)"
-                if severity == Severity.INFO
-                else ""
+                " (background operation — lower priority)" if severity == Severity.INFO else ""
             )
             description = (
                 f"Serial N+1 via ``await`` in list comprehension: "
@@ -1604,6 +1749,7 @@ def _iter_direct_calls_no_nested(
                 session.execute(query, ids)   # ← inside a closure, not outer fn
             return do_load                    # ← outer fn just creates a callable
     """
+
     def _walk(node: ast.AST) -> Iterable[ast.Call]:
         for child in ast.iter_child_nodes(node):
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -1675,9 +1821,8 @@ def _unwrap_create_task(node: ast.Call) -> ast.Call | None:
     when the first argument is not itself a Call node.
     """
     func = node.func
-    is_create_task = (
-        (isinstance(func, ast.Name) and func.id == "create_task")
-        or (isinstance(func, ast.Attribute) and func.attr == "create_task")
+    is_create_task = (isinstance(func, ast.Name) and func.id == "create_task") or (
+        isinstance(func, ast.Attribute) and func.attr == "create_task"
     )
     if not is_create_task:
         return None
@@ -1702,7 +1847,7 @@ def _extract_gather_source(
     E. map() call:            ``*map(db_fn, items)``
 
     Returns:
-    - ``ListComp`` or ``GeneratorExp`` for cases A–D
+    - ``ListComp`` or ``GeneratorExp`` for cases A-D
     - ``(callee_name, iter_expr)`` tuple for case E
     - ``None`` if the pattern is not recognised
     """
@@ -1797,10 +1942,7 @@ def _collect_loop_var_aliases(
             if not isinstance(stmt, ast.Assign):
                 continue
             # Check if RHS references any current result variable (simple Name only).
-            rhs_uses = any(
-                isinstance(n, ast.Name) and n.id in result
-                for n in ast.walk(stmt.value)
-            )
+            rhs_uses = any(isinstance(n, ast.Name) and n.id in result for n in ast.walk(stmt.value))
             if not rhs_uses:
                 continue
             # Only expand for simple RHS (Name, Subscript, Attribute — not calls)
@@ -1875,9 +2017,7 @@ def _is_likely_in_memory_call(call: ast.Call, callee: str) -> bool:
     # for exact word matches against service patterns.  This prevents
     # substring false-positives like "handlers" matching "handler".
     recv_tokens = set(recv.split("_"))
-    if recv_tokens & _SERVICE_RECEIVER_PATTERNS:
-        return False
-    return True
+    return not recv_tokens & _SERVICE_RECEIVER_PATTERNS
 
 
 def _is_batch_arg_execute(node: ast.Call) -> bool:
@@ -1959,10 +2099,7 @@ def _receiver_uses_any(call: ast.Call, names: frozenset[str]) -> bool:
     func = call.func
     if not isinstance(func, ast.Attribute):
         return False
-    for node in ast.walk(func.value):
-        if isinstance(node, ast.Name) and node.id in names:
-            return True
-    return False
+    return any(isinstance(node, ast.Name) and node.id in names for node in ast.walk(func.value))
 
 
 def _get_bodies(stmt: ast.stmt) -> list[list[ast.stmt]]:
@@ -2060,8 +2197,10 @@ def _all_enum_like(elts: list[ast.expr]) -> bool:
         if isinstance(elt, ast.Attribute):
             continue  # enum member or dotted constant
         # Tuple of string/attribute constants: ("field_a", "field_b")
-        if isinstance(elt, ast.Tuple) and elt.elts and all(
-            isinstance(e, (ast.Constant, ast.Attribute)) for e in elt.elts
+        if (
+            isinstance(elt, ast.Tuple)
+            and elt.elts
+            and all(isinstance(e, (ast.Constant, ast.Attribute)) for e in elt.elts)
         ):
             continue
         return False
@@ -2247,10 +2386,7 @@ def _is_constant_n_iter(
                     ):
                         return True
                     # obj.<config_attr>  (no method call)
-                    if (
-                        isinstance(gen_iter, ast.Attribute)
-                        and _is_config_attr(gen_iter.attr)
-                    ):
+                    if isinstance(gen_iter, ast.Attribute) and _is_config_attr(gen_iter.attr):
                         return True
         return False
 
@@ -2284,11 +2420,7 @@ def _is_constant_n_iter(
                 break  # unknown structure — stop peeling
 
     # Sub-case 6b: plain variable name whose assignment derives from config attr
-    if isinstance(iter_expr, ast.Name):
-        if _assigned_from_config_attr(iter_expr.id):
-            return True
-
-    return False
+    return bool(isinstance(iter_expr, ast.Name) and _assigned_from_config_attr(iter_expr.id))
 
 
 def _is_constant_n_loop(

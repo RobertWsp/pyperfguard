@@ -23,7 +23,7 @@ bypass the cache and can exhaust the server-side prepared statement cache.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -54,9 +54,7 @@ class CassandraPrepareLoopRule:
             node=node,
             ctx=ctx,
             severity=self.severity,
-            fix=Fix(
-                description="Move ``stmt = session.prepare(...)`` outside the loop."
-            ),
+            fix=Fix(description="Move ``stmt = session.prepare(...)`` outside the loop."),
         )
 
     @staticmethod

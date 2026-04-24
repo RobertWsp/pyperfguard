@@ -47,7 +47,10 @@ class AstContext:
     def in_loop(self) -> bool:
         """True if the current node is inside a loop *body* (For, AsyncFor, While)."""
         for parent, fname in self.field_path:
-            if isinstance(parent, (ast.For, ast.AsyncFor, ast.While)) and fname in ("body", "orelse"):
+            if isinstance(parent, (ast.For, ast.AsyncFor, ast.While)) and fname in (
+                "body",
+                "orelse",
+            ):
                 return True
         return False
 
@@ -68,7 +71,10 @@ class AstContext:
     def enclosing_loop(self) -> ast.AST | None:
         """Return the innermost enclosing loop node, or ``None``."""
         for parent, fname in reversed(self.field_path):
-            if isinstance(parent, (ast.For, ast.AsyncFor, ast.While)) and fname in ("body", "orelse"):
+            if isinstance(parent, (ast.For, ast.AsyncFor, ast.While)) and fname in (
+                "body",
+                "orelse",
+            ):
                 return parent
         return None
 
@@ -118,9 +124,9 @@ class AstContext:
         idx = src_line.find("# noqa")
         if idx == -1:
             return False
-        remainder = src_line[idx + len("# noqa"):].lstrip()
+        remainder = src_line[idx + len("# noqa") :].lstrip()
         if not remainder or remainder[0] != ":":
-            return True  # bare # noqa — suppress everything
+            return True  # bare
         codes_str = remainder[1:].split("#")[0]
         codes = {c.strip() for c in codes_str.split(",")}
         return rule_id in codes

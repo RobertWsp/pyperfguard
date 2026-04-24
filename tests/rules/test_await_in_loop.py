@@ -44,10 +44,7 @@ def test_await_in_async_for_not_flagged():
 
 
 def test_await_outside_loop_not_flagged():
-    src = (
-        "async def fetch_one():\n"
-        "    return await db.get(1)\n"
-    )
+    src = "async def fetch_one():\n    return await db.get(1)\n"
     findings = _run(src)
     assert findings == []
 
@@ -55,11 +52,7 @@ def test_await_outside_loop_not_flagged():
 def test_await_in_non_async_function_not_flagged():
     # Syntactically invalid in Python — but if parsed, should not flag.
     # We test with async function to avoid SyntaxError.
-    src = (
-        "async def f(ids):\n"
-        "    for uid in ids:\n"
-        "        pass\n"
-    )
+    src = "async def f(ids):\n    for uid in ids:\n        pass\n"
     findings = _run(src)
     assert findings == []
 
@@ -77,11 +70,7 @@ def test_await_inside_gather_not_flagged():
 def test_await_in_while_loop_not_flagged():
     # PKN008 targets regular 'for' loops specifically (not 'while').
     # await in while is a common valid pattern (e.g. polling loops).
-    src = (
-        "async def poll():\n"
-        "    while True:\n"
-        "        data = await socket.recv()\n"
-    )
+    src = "async def poll():\n    while True:\n        data = await socket.recv()\n"
     findings = _run(src)
     assert findings == []
 

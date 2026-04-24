@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterable
 from enum import Enum
-from typing import TYPE_CHECKING, Iterable, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from pyperfguard.core.severity import Severity
 

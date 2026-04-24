@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 # Resolve the package directory dynamically so we filter our own frames
 # without false positives when the user's repo happens to contain

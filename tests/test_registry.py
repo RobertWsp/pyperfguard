@@ -32,7 +32,9 @@ class _CatchAllRule:
 def test_register_and_lookup_by_node_type(fresh_registry: Registry):
     rule = _DummyRule()
     fresh_registry.register_rule(rule)
-    matched = list(fresh_registry.ast_rules_for(ast.Call(func=ast.Name(id="x"), args=[], keywords=[])))
+    matched = list(
+        fresh_registry.ast_rules_for(ast.Call(func=ast.Name(id="x"), args=[], keywords=[]))
+    )
     assert rule in matched
 
 

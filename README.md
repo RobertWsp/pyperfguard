@@ -4,10 +4,39 @@
 
 Catches anti-patterns that profilers miss and unit tests never exercise: N+1 queries that only appear under load, blocking calls that starve your event loop, Cassandra patterns that look fine locally but destroy latency at scale.
 
-[![PyPI](https://img.shields.io/pypi/v/pyperfguard)](https://pypi.org/project/pyperfguard/)
-[![Python](https://img.shields.io/pypi/pyversions/pyperfguard)](https://pypi.org/project/pyperfguard/)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://pypi.org/project/pyperfguard/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/RobertWsp/pyperfguard/actions/workflows/ci.yml/badge.svg)](https://github.com/RobertWsp/pyperfguard/actions/workflows/ci.yml)
+
+---
+
+## Why pyperfguard?
+
+Performance bugs in Python are rarely caught by tests. They hide in production patterns:
+
+- **N+1 queries** look correct in unit tests with mocked databases, but fire one query per loop iteration under real load.
+- **Blocking calls in async code** (`time.sleep`, `requests.get`) pass all tests locally but starve the event loop in production.
+- **Cassandra `ALLOW FILTERING`** returns fast on a 100-row dev cluster, but scans every partition at scale.
+- **O(n²) string concatenation** (`+=` in a loop) is undetectable by linters that only check types.
+
+**pyperfguard was built specifically to be used alongside AI coding assistants.** When an LLM writes or reviews code, it produces context fast — but it doesn't run the code under load. pyperfguard runs statically (AST pass, no execution) and emits compact, structured output designed to fit inside an AI tool's context window:
+
+```
+src/views.py:135:16 PKN009[W] Blocking call requests.get() inside async def.
+src/service.py:52:9 PKN010[E] CQL query contains ALLOW FILTERING.
+```
+
+Each finding is one line: file, line, column, rule ID, severity, short message. No noise, no prose. Feed it directly to your AI assistant's context and ask it to fix what pyperfguard found — the loop closes automatically.
+
+The compact JSON format (`--format json`) is optimized for the same use case:
+
+```json
+{"findings": [{"rule_id": "PKN010", "sev": "E", "file": "src/service.py", "line": 52, "col": 9, "msg": "CQL query contains ALLOW FILTERING."}]}
+```
+
+No nulls. No schema metadata. No redundant fields. Just the signal the model needs.
+
+> **Typical flow:** `pyperfguard analyze src/ --format json | <pipe to LLM>` → model sees all findings in one context window, generates targeted fixes.
 
 ---
 

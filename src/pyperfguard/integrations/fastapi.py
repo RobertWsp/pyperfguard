@@ -33,7 +33,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from pyperfguard.core.finding import Finding
 from pyperfguard.runtime_engine.scope import Scope, reset_scope, set_scope
@@ -86,6 +87,7 @@ class PyperfguardMiddleware:
             self.detectors = list(detectors)
         else:
             from pyperfguard.detectors.nplusone import NPlusOneDetector
+
             self.detectors = [NPlusOneDetector(threshold=threshold)]
 
     async def __call__(self, scope: _Scope, receive: _Receive, send: _Send) -> None:

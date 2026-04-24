@@ -63,10 +63,7 @@ def test_cli_exit_zero_overrides(tmp_path: Path, capsys):
 
 
 def test_cli_select_filter(tmp_path: Path, capsys):
-    (tmp_path / "x.py").write_text(
-        "def f(x=[]): pass\n"
-        "session.execute('ALLOW FILTERING')\n"
-    )
+    (tmp_path / "x.py").write_text("def f(x=[]): pass\nsession.execute('ALLOW FILTERING')\n")
     rc = main(["analyze", str(tmp_path), "--format", "json", "--select", "PKN010"])
     assert rc == 1
     doc = json.loads(capsys.readouterr().out)

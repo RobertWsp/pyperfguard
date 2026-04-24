@@ -14,7 +14,10 @@ from pyperfguard.fingerprint.sql import fingerprint_hash as sql_hash
 from pyperfguard.fingerprint.sql import normalize as sql_normalize
 
 __all__ = [
-    "sql_normalize", "sql_hash",
-    "cql_normalize", "cql_hash",
-    "mongo_normalize", "mongo_hash",
+    "cql_hash",
+    "cql_normalize",
+    "mongo_hash",
+    "mongo_normalize",
+    "sql_hash",
+    "sql_normalize",
 ]

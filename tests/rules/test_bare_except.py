@@ -19,32 +19,17 @@ def _run(src: str) -> list:
 
 
 def test_bare_except_flagged():
-    src = (
-        "try:\n"
-        "    f()\n"
-        "except:\n"
-        "    pass\n"
-    )
+    src = "try:\n    f()\nexcept:\n    pass\n"
     findings = _run(src)
     assert len(findings) == 1
     assert findings[0].rule_id == "PKN002"
 
 
 def test_typed_except_not_flagged():
-    src = (
-        "try:\n"
-        "    f()\n"
-        "except ValueError:\n"
-        "    pass\n"
-    )
+    src = "try:\n    f()\nexcept ValueError:\n    pass\n"
     assert _run(src) == []
 
 
 def test_exception_base_not_flagged():
-    src = (
-        "try:\n"
-        "    f()\n"
-        "except Exception:\n"
-        "    pass\n"
-    )
+    src = "try:\n    f()\nexcept Exception:\n    pass\n"
     assert _run(src) == []

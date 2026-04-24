@@ -69,11 +69,7 @@ def test_overload_decorator_not_flagged():
 
 def test_typing_overload_attribute_not_flagged():
     # `@typing.overload` form
-    src = (
-        "import typing\n"
-        "@typing.overload\n"
-        "def f(x: list = []) -> list: ...\n"
-    )
+    src = "import typing\n@typing.overload\ndef f(x: list = []) -> list: ...\n"
     findings = _run(src)
     assert findings == []
 

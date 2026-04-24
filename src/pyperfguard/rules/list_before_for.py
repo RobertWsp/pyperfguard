@@ -20,7 +20,7 @@ Severity: INFO — mutation-during-iteration is a legitimate pattern.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -55,8 +55,7 @@ class ListBeforeForRule:
             severity=self.severity,
             fix=Fix(
                 description=(
-                    "Remove the ``list()`` wrapper: "
-                    "``for x in list(seq):`` → ``for x in seq:``"
+                    "Remove the ``list()`` wrapper: ``for x in list(seq):`` → ``for x in seq:``"
                 )
             ),
         )
@@ -69,7 +68,7 @@ class ListBeforeForRule:
         if isinstance(node, ast.Attribute):
             parent = ListBeforeForRule._attr_chain(node.value)
             if parent:
-                return parent + (node.attr,)
+                return (*parent, node.attr)
         return ()
 
     @staticmethod
@@ -92,10 +91,21 @@ class ListBeforeForRule:
         if not iterable_chain:
             return False
 
-        _MUTATING_METHODS = frozenset({
-            "remove", "pop", "discard", "clear", "update", "append",
-            "insert", "extend", "uninstall_member", "delete", "drop",
-        })
+        _MUTATING_METHODS = frozenset(
+            {
+                "remove",
+                "pop",
+                "discard",
+                "clear",
+                "update",
+                "append",
+                "insert",
+                "extend",
+                "uninstall_member",
+                "delete",
+                "drop",
+            }
+        )
 
         for node in ast.walk(ast.Module(body=for_node.body, type_ignores=[])):
             # del d[k]  /  del self.items[k]
@@ -138,12 +148,10 @@ class ListBeforeForRule:
         # list(d.items()) / list(d.keys()) / list(d.values()) is a legitimate
         # pattern for mutating a dict while iterating — do not flag it.
         arg = expr.args[0]
-        if (
+        return not (
             isinstance(arg, ast.Call)
             and isinstance(arg.func, ast.Attribute)
             and arg.func.attr in ("items", "keys", "values")
             and not arg.args
             and not arg.keywords
-        ):
-            return False
-        return True
+        )

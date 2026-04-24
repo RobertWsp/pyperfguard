@@ -32,6 +32,7 @@ def _f(
 # TerminalReporter — compact (default)
 # ---------------------------------------------------------------------------
 
+
 def test_terminal_no_findings_prints_ok():
     buf = io.StringIO()
     TerminalReporter(stream=buf, color=False).report([])
@@ -41,7 +42,9 @@ def test_terminal_no_findings_prints_ok():
 def test_terminal_compact_single_line_per_finding():
     buf = io.StringIO()
     TerminalReporter(stream=buf, color=False).report([_f(), _f("PKN002", sev=Severity.ERROR)])
-    lines = [l for l in buf.getvalue().splitlines() if l.strip() and "findings" not in l]
+    lines = [
+        line for line in buf.getvalue().splitlines() if line.strip() and "findings" not in line
+    ]
     # Compact: one line per finding (no multi-line snippet/fix)
     assert len(lines) == 2
 
@@ -119,12 +122,13 @@ def test_terminal_lists_findings_with_summary():
 # JsonReporter — compact (default)
 # ---------------------------------------------------------------------------
 
+
 def test_json_compact_emits_well_formed_doc():
     buf = io.StringIO()
     JsonReporter(stream=buf).report([_f()])
     doc = json.loads(buf.getvalue())
     assert "findings" in doc
-    assert "version" not in doc   # compact: no schema metadata
+    assert "version" not in doc  # compact: no schema metadata
     assert "schema" not in doc
     f = doc["findings"][0]
     assert f["rule_id"] == "PKN001"
@@ -203,6 +207,7 @@ def test_json_verbose_includes_snippet():
 # SarifReporter (unchanged semantics — always verbose/full)
 # ---------------------------------------------------------------------------
 
+
 def test_sarif_doc_shape():
     buf = io.StringIO()
     SarifReporter(stream=buf).report([_f(), _f("PKN001"), _f("PKN010", sev=Severity.ERROR)])
@@ -220,11 +225,13 @@ def test_sarif_doc_shape():
 
 def test_sarif_levels_mapping():
     buf = io.StringIO()
-    SarifReporter(stream=buf).report([
-        _f("R1", sev=Severity.ERROR),
-        _f("R2", sev=Severity.WARNING),
-        _f("R3", sev=Severity.INFO),
-    ])
+    SarifReporter(stream=buf).report(
+        [
+            _f("R1", sev=Severity.ERROR),
+            _f("R2", sev=Severity.WARNING),
+            _f("R3", sev=Severity.INFO),
+        ]
+    )
     doc = json.loads(buf.getvalue())
     levels = sorted(r["level"] for r in doc["runs"][0]["results"])
     assert levels == ["error", "note", "warning"]

@@ -22,7 +22,7 @@ to avoid false positives.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -74,9 +74,7 @@ class IsinstanceWithListRule:
             node=second_arg,
             ctx=ctx,
             severity=self.severity,
-            fix=Fix(
-                description=f"Replace ``{list_src}`` with ``({inner},)``."
-            ),
+            fix=Fix(description=f"Replace ``{list_src}`` with ``({inner},)``."),
         )
 
     @staticmethod
@@ -84,11 +82,9 @@ class IsinstanceWithListRule:
         func = node.func
         if isinstance(func, ast.Name) and func.id == "isinstance":
             return True
-        if (
+        return bool(
             isinstance(func, ast.Attribute)
             and func.attr == "isinstance"
             and isinstance(func.value, ast.Name)
             and func.value.id == "builtins"
-        ):
-            return True
-        return False
+        )

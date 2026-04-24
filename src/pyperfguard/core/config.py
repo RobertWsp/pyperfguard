@@ -28,10 +28,16 @@ class ReportConfig:
 class Config:
     select: list[str] = field(default_factory=lambda: ["PKN"])
     ignore: list[str] = field(default_factory=list)
-    exclude: list[str] = field(default_factory=lambda: [
-        "**/.venv/**", "**/build/**", "**/dist/**", "**/__pycache__/**",
-        "**/.git/**", "**/node_modules/**",
-    ])
+    exclude: list[str] = field(
+        default_factory=lambda: [
+            "**/.venv/**",
+            "**/build/**",
+            "**/dist/**",
+            "**/__pycache__/**",
+            "**/.git/**",
+            "**/node_modules/**",
+        ]
+    )
     # Minimum severity level to report. Findings below this level are silently
     # dropped. Valid values: "error", "warning", "info", "hint" (case-insensitive).
     # When None (default), all findings are reported.
@@ -53,6 +59,7 @@ class Config:
             data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
         except Exception as exc:
             import warnings
+
             warnings.warn(
                 f"pyperfguard: failed to parse pyproject.toml ({pyproject}): {exc}. "
                 "Using default configuration.",

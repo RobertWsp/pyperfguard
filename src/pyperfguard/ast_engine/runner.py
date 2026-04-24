@@ -3,17 +3,17 @@ from __future__ import annotations
 import ast
 import fnmatch
 import logging
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator
-
-_log = logging.getLogger(__name__)
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.ast_engine.visitor import PyperfVisitor
 from pyperfguard.core.config import Config
 from pyperfguard.core.finding import Finding
 from pyperfguard.core.registry import Registry, get_registry
+
+_log = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -51,6 +51,7 @@ class AstEngine:
         # not excluded by select/ignore config so we skip the work when unneeded.
         if parsed and self._is_rule_active("PKN102"):
             from pyperfguard.ast_engine.call_graph import CallGraph
+
             cg = CallGraph()
             for file, (module, source) in parsed.items():
                 cg.add_module(file, module, source)
@@ -77,9 +78,7 @@ class AstEngine:
         cfg = self.config
         if cfg.select and not any(rule_id.startswith(p) for p in cfg.select):
             return False
-        if cfg.ignore and any(rule_id.startswith(p) for p in cfg.ignore):
-            return False
-        return True
+        return not (cfg.ignore and any(rule_id.startswith(p) for p in cfg.ignore))
 
     def _iter_files(self, paths: Iterable[Path]) -> Iterator[Path]:
         seen: set[Path] = set()

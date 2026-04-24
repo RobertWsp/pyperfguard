@@ -13,8 +13,8 @@ import threading
 import time
 import uuid
 from collections import deque
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable
 
 from pyperfguard.runtime_engine.events import Event
 
@@ -39,6 +39,7 @@ class Scope:
                 self._overflow_count += 1
                 if self._overflow_count == 1:
                     import warnings
+
                     warnings.warn(
                         f"pyperfguard: scope '{self.name}' event buffer full "
                         f"(maxlen={self._events.maxlen}). Oldest events dropped; "

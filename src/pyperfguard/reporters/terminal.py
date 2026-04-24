@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, TextIO
+from typing import TextIO
 
-from pyperfguard.core.finding import Finding, SEV_CODE, rel_path
+from pyperfguard.core.finding import SEV_CODE, Finding, rel_path
 from pyperfguard.core.severity import Severity
 
 _COLORS = {

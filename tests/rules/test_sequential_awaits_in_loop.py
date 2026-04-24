@@ -1,4 +1,5 @@
 """Tests for PKN025: sequential await calls in a loop that could use asyncio.gather."""
+
 from __future__ import annotations
 
 import ast
@@ -36,9 +37,7 @@ def test_simple_sequential_await_in_loop_flagged():
 
 def test_async_for_with_await_flagged():
     src = (
-        "async def f(aiter):\n"
-        "    async for item in aiter:\n"
-        "        result = await process(item)\n"
+        "async def f(aiter):\n    async for item in aiter:\n        result = await process(item)\n"
     )
     findings = _run(src)
     assert len(findings) == 1
@@ -47,21 +46,13 @@ def test_async_for_with_await_flagged():
 
 def test_sync_function_not_flagged():
     # No async def — await is invalid in sync
-    src = (
-        "def f(items):\n"
-        "    for item in items:\n"
-        "        result = fetch(item)\n"
-    )
+    src = "def f(items):\n    for item in items:\n        result = fetch(item)\n"
     findings = _run(src)
     assert findings == []
 
 
 def test_no_await_in_loop_not_flagged():
-    src = (
-        "async def f(items):\n"
-        "    for item in items:\n"
-        "        process(item)\n"
-    )
+    src = "async def f(items):\n    for item in items:\n        process(item)\n"
     findings = _run(src)
     assert findings == []
 
@@ -91,11 +82,7 @@ def test_nested_loop_not_flagged():
 
 
 def test_message_mentions_gather():
-    src = (
-        "async def f(items):\n"
-        "    for item in items:\n"
-        "        result = await fetch(item)\n"
-    )
+    src = "async def f(items):\n    for item in items:\n        result = await fetch(item)\n"
     findings = _run(src)
     assert len(findings) == 1
     assert "gather" in findings[0].message
@@ -103,10 +90,6 @@ def test_message_mentions_gather():
 
 def test_expr_await_in_loop_flagged():
     # Standalone `await call()` without assignment.
-    src = (
-        "async def f(items):\n"
-        "    for item in items:\n"
-        "        await notify(item)\n"
-    )
+    src = "async def f(items):\n    for item in items:\n        await notify(item)\n"
     findings = _run(src)
     assert len(findings) == 1

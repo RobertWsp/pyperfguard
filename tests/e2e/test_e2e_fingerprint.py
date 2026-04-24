@@ -4,9 +4,8 @@ Verifies that the fingerprinting modules collapse different literal values
 to the same canonical form, while correctly distinguishing structurally
 different queries.
 """
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 from pyperfguard.fingerprint.cql import fingerprint_hash as cql_hash
 from pyperfguard.fingerprint.cql import normalize as cql_normalize
@@ -14,7 +13,6 @@ from pyperfguard.fingerprint.mongo import fingerprint_hash as mongo_hash
 from pyperfguard.fingerprint.mongo import normalize as mongo_normalize
 from pyperfguard.fingerprint.sql import fingerprint_hash as sql_hash
 from pyperfguard.fingerprint.sql import normalize as sql_normalize
-
 
 # ---------------------------------------------------------------------------
 # SQL fingerprinting tests
@@ -246,15 +244,27 @@ class TestMongoFingerprint:
 
     def test_aggregation_pipeline_same_structure(self):
         """Aggregation pipelines with different literal values → same fingerprint."""
-        pipe1 = [{"$match": {"status": "active"}}, {"$group": {"_id": "$country", "total": {"$sum": 1}}}]
-        pipe2 = [{"$match": {"status": "inactive"}}, {"$group": {"_id": "$region", "total": {"$sum": 99}}}]
+        pipe1 = [
+            {"$match": {"status": "active"}},
+            {"$group": {"_id": "$country", "total": {"$sum": 1}}},
+        ]
+        pipe2 = [
+            {"$match": {"status": "inactive"}},
+            {"$group": {"_id": "$region", "total": {"$sum": 99}}},
+        ]
         # Pipelines are lists — normalize treats them as [?] regardless of content
         assert mongo_hash(pipe1) == mongo_hash(pipe2)
 
     def test_nested_filter_same_fingerprint(self):
         """Nested filter documents with different values → same fingerprint."""
-        cmd1 = {"find": "events", "filter": {"user_id": "u1", "ts": {"$gte": 1700000000, "$lt": 1700100000}}}
-        cmd2 = {"find": "events", "filter": {"user_id": "u2", "ts": {"$gte": 1700200000, "$lt": 1700300000}}}
+        cmd1 = {
+            "find": "events",
+            "filter": {"user_id": "u1", "ts": {"$gte": 1700000000, "$lt": 1700100000}},
+        }
+        cmd2 = {
+            "find": "events",
+            "filter": {"user_id": "u2", "ts": {"$gte": 1700200000, "$lt": 1700300000}},
+        }
         assert mongo_hash(cmd1) == mongo_hash(cmd2)
 
     def test_insert_one_same_fingerprint(self):
@@ -266,7 +276,10 @@ class TestMongoFingerprint:
     def test_update_different_fields_different_fingerprints(self):
         """Updates touching different fields → different fingerprints."""
         cmd1 = {"update": "users", "updates": [{"q": {"_id": 1}, "u": {"$set": {"name": "Alice"}}}]}
-        cmd2 = {"update": "users", "updates": [{"q": {"_id": 1}, "u": {"$set": {"email": "a@b.com"}}}]}
+        cmd2 = {
+            "update": "users",
+            "updates": [{"q": {"_id": 1}, "u": {"$set": {"email": "a@b.com"}}}],
+        }
         # Both normalize as {update:?,updates:[?]} — same structure, same fingerprint
         assert mongo_hash(cmd1) == mongo_hash(cmd2)
 
@@ -293,7 +306,14 @@ class TestMongoFingerprint:
         """Complex aggregation with $lookup, $unwind, $project — same structure = same hash."""
         pipe1 = [
             {"$match": {"tenant_id": "t1", "active": True}},
-            {"$lookup": {"from": "orders", "localField": "_id", "foreignField": "user_id", "as": "orders"}},
+            {
+                "$lookup": {
+                    "from": "orders",
+                    "localField": "_id",
+                    "foreignField": "user_id",
+                    "as": "orders",
+                }
+            },
             {"$unwind": "$orders"},
             {"$project": {"name": 1, "email": 1, "orders.total": 1}},
             {"$sort": {"orders.total": -1}},
@@ -301,7 +321,14 @@ class TestMongoFingerprint:
         ]
         pipe2 = [
             {"$match": {"tenant_id": "t2", "active": False}},
-            {"$lookup": {"from": "orders", "localField": "_id", "foreignField": "user_id", "as": "orders"}},
+            {
+                "$lookup": {
+                    "from": "orders",
+                    "localField": "_id",
+                    "foreignField": "user_id",
+                    "as": "orders",
+                }
+            },
             {"$unwind": "$orders"},
             {"$project": {"name": 1, "email": 1, "orders.total": 1}},
             {"$sort": {"orders.total": 1}},

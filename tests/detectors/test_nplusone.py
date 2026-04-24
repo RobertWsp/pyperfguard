@@ -10,7 +10,9 @@ from pyperfguard.runtime_engine.events import QueryEvent
 from pyperfguard.runtime_engine.scope import Scope
 
 
-def _make_event(fp: str, call_site: int = 1, db: str = "postgresql", dur: float = 0.001) -> QueryEvent:
+def _make_event(
+    fp: str, call_site: int = 1, db: str = "postgresql", dur: float = 0.001
+) -> QueryEvent:
     return QueryEvent(
         kind="query",
         fingerprint=fp,

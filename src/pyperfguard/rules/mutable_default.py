@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -10,9 +10,18 @@ from pyperfguard.core.severity import Severity
 
 # Calls whose default values build a fresh mutable container (still shared
 # across invocations because the call runs once at def-time).
-_MUTABLE_BUILDER_NAMES: frozenset[str] = frozenset({
-    "list", "dict", "set", "bytearray", "deque", "defaultdict", "OrderedDict", "Counter",
-})
+_MUTABLE_BUILDER_NAMES: frozenset[str] = frozenset(
+    {
+        "list",
+        "dict",
+        "set",
+        "bytearray",
+        "deque",
+        "defaultdict",
+        "OrderedDict",
+        "Counter",
+    }
+)
 
 
 class MutableDefaultRule:

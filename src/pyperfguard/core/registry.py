@@ -3,7 +3,8 @@ from __future__ import annotations
 import ast
 import importlib.metadata
 from collections import defaultdict
-from typing import TYPE_CHECKING, Iterable
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from pyperfguard.core.rule import Rule, RuleScope
 
@@ -57,7 +58,9 @@ class Registry:
             return [*rules, *self._catch_all_rules]
         return rules
 
-    def select(self, *, include: list[str] | None = None, exclude: list[str] | None = None) -> list[Rule]:
+    def select(
+        self, *, include: list[str] | None = None, exclude: list[str] | None = None
+    ) -> list[Rule]:
         """Return rules filtered by id-prefix include/exclude lists."""
         result = []
         for rule in self._rules.values():
@@ -99,17 +102,17 @@ class Registry:
             try:
                 rule_cls = ep.load()
                 self.register_rule(rule_cls())
-            except Exception as exc:  # noqa: BLE001 - plugin isolation
+            except Exception as exc:
                 _warn(f"Failed to load rule {ep.name!r}: {exc}")
         for ep in importlib.metadata.entry_points(group=_REPORTERS_GROUP):
             try:
                 self.register_reporter(ep.name, ep.load())
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 _warn(f"Failed to load reporter {ep.name!r}: {exc}")
         for ep in importlib.metadata.entry_points(group=_PATCHERS_GROUP):
             try:
                 self.register_patcher(ep.name, ep.load()())
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 _warn(f"Failed to load patcher {ep.name!r}: {exc}")
         self._discovered = True
 

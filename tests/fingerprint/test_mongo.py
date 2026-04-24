@@ -55,7 +55,7 @@ def test_depth_limit_returns_placeholder():
     # Build a deeply nested dict (depth > 10)
     deep: dict = {}
     cur = deep
-    for i in range(15):
+    for _i in range(15):
         cur["x"] = {}
         cur = cur["x"]
     cur["val"] = 42

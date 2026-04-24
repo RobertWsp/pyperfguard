@@ -1,4 +1,5 @@
 """Tests for CallGraph — inter-procedural N+1 static detection."""
+
 from __future__ import annotations
 
 import ast
@@ -111,6 +112,7 @@ def test_finding_has_pkn102_rule_id():
 
 # ── False-positive heuristic tests ────────────────────────────────────────────
 
+
 class TestConstantNSuppression:
     """Loops over small, fixed enum-like sets should NOT be flagged."""
 
@@ -219,6 +221,7 @@ class TestEarlyExitSeverity:
     def test_early_return_loop_is_info(self):
         """for variant in variants: ...; if row: return row — INFO, not WARNING."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def find_by_phone(executor, company_id, variants):\n"
             "    for variant in variants:\n"
@@ -242,6 +245,7 @@ class TestBackgroundFnSeverity:
     def test_cleanup_fn_is_info(self):
         """cleanup_* functions should produce INFO, not WARNING."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def cleanup_expired_sessions(executor, session_ids):\n"
             "    for sid in session_ids:\n"
@@ -257,6 +261,7 @@ class TestBackgroundFnSeverity:
     def test_migrate_fn_is_info(self):
         """migrate_* functions should produce INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def migrate_user_records(executor, user_ids):\n"
             "    for uid in user_ids:\n"
@@ -272,6 +277,7 @@ class TestBackgroundFnSeverity:
     def test_regular_async_fn_not_background(self):
         """get_*_async should NOT be classified as background (async ≠ sync)."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def get_instances_by_company_async(executor, company_id, rows):\n"
             "    results = []\n"
@@ -297,6 +303,7 @@ class TestGatherN1Detection:
     def test_gather_listcomp_direct_db_flagged(self):
         """gather(*[executor.execute(...) for id in ids]) → INFO (Variant A, direct)."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def list_users(executor, ids):\n"
@@ -312,6 +319,7 @@ class TestGatherN1Detection:
     def test_gather_listcomp_indirect_db_flagged(self):
         """gather(*[get_user(id) for id in ids]) where get_user hits DB → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(executor, uid):\n"
@@ -328,6 +336,7 @@ class TestGatherN1Detection:
     def test_gather_variable_listcomp_flagged(self):
         """tasks = [get_user(id) for id in ids]; gather(*tasks) → INFO (Variant B)."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(executor, uid):\n"
@@ -345,6 +354,7 @@ class TestGatherN1Detection:
     def test_gather_generator_expr_flagged(self):
         """gather(*(get_user(id) for id in ids)) with generator expression → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(executor, uid):\n"
@@ -429,7 +439,6 @@ class TestGatherN1Detection:
 
     def test_gather_nested_function_not_attributed_to_outer(self):
         """gather inside a nested def must not produce a finding on the outer function."""
-        from pyperfguard.core.severity import Severity
         src = (
             "import asyncio\n"
             "async def get_user(executor, uid):\n"
@@ -444,8 +453,7 @@ class TestGatherN1Detection:
         findings = list(cg.n1_findings())
         # Finding should be attributed to 'inner', not 'outer'
         outer_gather = [
-            f for f in findings
-            if "outer()" in f.message and "gather" in f.message.lower()
+            f for f in findings if "outer()" in f.message and "gather" in f.message.lower()
         ]
         assert outer_gather == [], "gather in nested fn must not be attributed to outer()"
         inner_findings = [f for f in findings if "inner()" in f.message]
@@ -461,6 +469,7 @@ class TestAwaitListcompN1:
     def test_await_listcomp_direct_db_flagged(self):
         """[await executor.execute(...) for id in ids] → WARNING (serial)."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def list_users(executor, ids):\n"
             "    return [await executor.execute('SELECT * FROM users WHERE id=%s', (uid,)) for uid in ids]\n"
@@ -473,6 +482,7 @@ class TestAwaitListcompN1:
     def test_await_listcomp_indirect_db_flagged(self):
         """[await get_user(id) for id in ids] where get_user hits DB → WARNING."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def get_user(executor, uid):\n"
             "    return await executor.execute('SELECT * FROM users WHERE id=%s', (uid,))\n"
@@ -488,6 +498,7 @@ class TestAwaitListcompN1:
     def test_await_listcomp_is_warning_not_info(self):
         """Serial await listcomp must be WARNING — worse than gather (INFO)."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(executor, uid):\n"
@@ -501,8 +512,12 @@ class TestAwaitListcompN1:
         )
         cg = _cg(src)
         findings = list(cg.n1_findings())
-        serial_findings = [f for f in findings if "Serial" in f.message or "serial" in f.message.lower()]
-        gather_findings = [f for f in findings if "gather" in f.message.lower() and "gather()" in f.message]
+        serial_findings = [
+            f for f in findings if "Serial" in f.message or "serial" in f.message.lower()
+        ]
+        gather_findings = [
+            f for f in findings if "gather" in f.message.lower() and "gather()" in f.message
+        ]
         assert any(f.severity == Severity.WARNING for f in serial_findings)
         assert any(f.severity == Severity.INFO for f in gather_findings)
 
@@ -517,7 +532,9 @@ class TestAwaitListcompN1:
         )
         cg = _cg(src)
         findings = list(cg.n1_findings())
-        listcomp_findings = [f for f in findings if "Serial" in f.message or "list comprehension" in f.message]
+        listcomp_findings = [
+            f for f in findings if "Serial" in f.message or "list comprehension" in f.message
+        ]
         assert listcomp_findings == [], "constant-N await listcomp should NOT be flagged"
 
     def test_await_listcomp_non_db_not_flagged(self):
@@ -598,6 +615,7 @@ class TestAsyncpgMethods:
     def test_conn_fetch_in_loop_flagged(self):
         """for id in ids: await conn.fetch(query, id) → WARNING."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def list_users(conn, ids):\n"
             "    results = []\n"
@@ -656,6 +674,7 @@ class TestTaskGroupN1:
     def test_taskgroup_for_loop_flagged(self):
         """async with TaskGroup() as tg: for uid in ids: tg.create_task(f(uid)) → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(conn, uid):\n"
@@ -674,6 +693,7 @@ class TestTaskGroupN1:
     def test_taskgroup_listcomp_flagged(self):
         """[tg.create_task(f(uid)) for uid in ids] inside TaskGroup → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(conn, uid):\n"
@@ -691,6 +711,7 @@ class TestTaskGroupN1:
     def test_create_task_listcomp_flagged(self):
         """[asyncio.create_task(f(uid)) for uid in ids] → INFO (concurrent)."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(conn, uid):\n"
@@ -722,6 +743,7 @@ class TestTaskGroupN1:
     def test_create_task_is_info_while_await_loop_is_warning(self):
         """create_task in loop → INFO; await in loop → WARNING (serial worse than concurrent)."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(conn, uid):\n"
@@ -749,10 +771,11 @@ class TestPathBasedBackground:
 
     def test_benchmark_path_is_info(self):
         """N+1 in /benchmarks/ file → INFO (not WARNING)."""
-        from pyperfguard.core.severity import Severity
-        from pathlib import Path
         import ast as _ast
+        from pathlib import Path
+
         from pyperfguard.ast_engine.call_graph import CallGraph
+        from pyperfguard.core.severity import Severity
 
         src = (
             "async def run_benchmark(conn, ids):\n"
@@ -765,15 +788,17 @@ class TestPathBasedBackground:
         cg.compute()
         findings = list(cg.n1_findings())
         assert len(findings) >= 1
-        assert all(f.severity == Severity.INFO for f in findings), \
+        assert all(f.severity == Severity.INFO for f in findings), (
             "benchmark path should produce INFO, not WARNING"
+        )
 
     def test_examples_path_is_info(self):
         """N+1 in /examples/ file → INFO."""
-        from pyperfguard.core.severity import Severity
-        from pathlib import Path
         import ast as _ast
+        from pathlib import Path
+
         from pyperfguard.ast_engine.call_graph import CallGraph
+        from pyperfguard.core.severity import Severity
 
         src = (
             "async def example_list(conn, ids):\n"
@@ -785,15 +810,17 @@ class TestPathBasedBackground:
         cg.compute()
         findings = list(cg.n1_findings())
         assert len(findings) >= 1
-        assert all(f.severity == Severity.INFO for f in findings), \
+        assert all(f.severity == Severity.INFO for f in findings), (
             "examples path should produce INFO, not WARNING"
+        )
 
     def test_regular_path_still_warning(self):
         """N+1 in regular /api/ file → WARNING (unaffected by path detection)."""
-        from pyperfguard.core.severity import Severity
-        from pathlib import Path
         import ast as _ast
+        from pathlib import Path
+
         from pyperfguard.ast_engine.call_graph import CallGraph
+        from pyperfguard.core.severity import Severity
 
         src = (
             "async def list_users(conn, ids):\n"
@@ -805,8 +832,9 @@ class TestPathBasedBackground:
         cg.compute()
         findings = list(cg.n1_findings())
         assert len(findings) >= 1
-        assert any(f.severity == Severity.WARNING for f in findings), \
+        assert any(f.severity == Severity.WARNING for f in findings), (
             "regular api path should still produce WARNING"
+        )
 
 
 # ── Background function new tokens ────────────────────────────────────────────
@@ -818,6 +846,7 @@ class TestBackgroundTokens:
     def test_teardown_fn_is_info(self):
         """r_teardown() — test teardown → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def r_teardown(conn, keys):\n"
             "    for key in keys:\n"
@@ -831,6 +860,7 @@ class TestBackgroundTokens:
     def test_assert_fn_is_info(self):
         """_assert_writes_succeed() — assertion helper → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def _assert_writes_succeed(conn, ids):\n"
             "    for uid in ids:\n"
@@ -845,6 +875,7 @@ class TestBackgroundTokens:
     def test_verify_fn_is_info(self):
         """verify_insert_select() — verification helper → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def verify_insert_select(conn, ids):\n"
             "    for uid in ids:\n"
@@ -858,6 +889,7 @@ class TestBackgroundTokens:
     def test_benchmark_fn_name_is_info(self):
         """run_benchmark_queries() — benchmark function name → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def run_benchmark_queries(conn, ids):\n"
             "    for uid in ids:\n"
@@ -878,6 +910,7 @@ class TestReceiverSuffixDetection:
     def test_listener_conn_execute_in_loop_flagged(self):
         """self._listener_conn.execute() in loop — suffix '_conn' → WARNING."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def subscribe(self, channels):\n"
             "    for channel in channels:\n"
@@ -932,7 +965,6 @@ class TestGatherMapTuplePatterns:
 
     def test_gather_map_db_fn_flagged(self):
         """asyncio.gather(*map(get_user, ids)) → INFO (concurrent N+1 via map)."""
-        from pyperfguard.core.severity import Severity
         src = (
             "import asyncio\n"
             "async def get_user(conn, uid):\n"
@@ -950,6 +982,7 @@ class TestGatherMapTuplePatterns:
     def test_gather_map_direct_db_fn_flagged(self):
         """asyncio.gather(*map(get_user, ids)) where get_user is DB-adjacent → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(conn, uid):\n"
@@ -966,6 +999,7 @@ class TestGatherMapTuplePatterns:
     def test_gather_tuple_wrapper_flagged(self):
         """asyncio.gather(*tuple(f(x) for x in items)) → INFO."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def get_user(conn, uid):\n"
@@ -1000,6 +1034,7 @@ class TestBFSFallbackDetection:
     def test_await_listcomp_two_hop_chain_flagged(self):
         """[await outer(x) for x in items] where outer→inner→db — 2-hop chain."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "async def db_fetch(conn, uid):\n"
             "    return await conn.execute('SELECT * FROM t WHERE id=%s', (uid,))\n"
@@ -1021,6 +1056,7 @@ class TestBFSFallbackDetection:
     def test_gather_two_hop_chain_flagged(self):
         """gather(*[outer(x) for x in items]) where outer→inner→db — 2-hop."""
         from pyperfguard.core.severity import Severity
+
         src = (
             "import asyncio\n"
             "async def db_fetch(conn, uid):\n"
@@ -1082,9 +1118,7 @@ class TestModuleLevelConstantIterables:
         )
         cg = _cg(src)
         findings = list(cg.n1_findings())
-        assert findings == [], (
-            "Loop over module-level constant list should NOT be flagged"
-        )
+        assert findings == [], "Loop over module-level constant list should NOT be flagged"
 
     def test_module_level_large_list_flagged(self):
         """Module-level list with more than _MAX_SMALL_N_INDIRECT elements is flagged."""
@@ -1099,6 +1133,7 @@ class TestModuleLevelConstantIterables:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Large module-level list SHOULD be flagged"
 
@@ -1116,6 +1151,7 @@ class TestModuleLevelConstantIterables:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Module-level list with Name nodes SHOULD be flagged"
 
@@ -1165,6 +1201,7 @@ class TestHardcodedPairVariableLists:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "3-element pair list SHOULD be flagged"
 
@@ -1207,6 +1244,7 @@ class TestProtocolLoopSuppression:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Named loop var with DB call SHOULD be flagged"
 
@@ -1228,11 +1266,7 @@ class TestAncestorParamClosure:
         """Calling a closure-variable (ancestor param) in a loop is NOT flagged."""
         # fn() in another file directly calls execute() → BFS marks 'fn' as db_adjacent.
         # The nested visit() calls fn() in a loop, but fn is an ancestor parameter.
-        db_src = (
-            "class TestSuite:\n"
-            "    def fn(self):\n"
-            "        self.session.execute('SELECT 1')\n"
-        )
+        db_src = "class TestSuite:\n    def fn(self):\n        self.session.execute('SELECT 1')\n"
         util_src = (
             "def visit_binary_product(fn, expr):\n"
             "    def visit(element):\n"
@@ -1244,8 +1278,7 @@ class TestAncestorParamClosure:
         findings = list(cg.n1_findings())
         # Only findings from util_src (visit()) are of interest.
         visit_findings = [
-            f for f in findings
-            if "visit" in f.message and "module_1" in str(f.location.path)
+            f for f in findings if "visit" in f.message and "module_1" in str(f.location.path)
         ]
         assert visit_findings == [], (
             "Calling an ancestor-parameter callback in a loop should NOT be flagged"
@@ -1261,6 +1294,7 @@ class TestAncestorParamClosure:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Real DB call in loop SHOULD be flagged"
 
@@ -1275,9 +1309,7 @@ class TestTestPathBFSIsolation:
     def test_test_path_fn_does_not_contaminate_prod_fn(self):
         """fn() in a /tests/ file does not pollute production fn() references."""
         test_src = (
-            "class TestCase:\n"
-            "    def fn(self):\n"
-            "        self.connection.execute('SELECT 1')\n"
+            "class TestCase:\n    def fn(self):\n        self.connection.execute('SELECT 1')\n"
         )
         prod_src = (
             "def fn(x):\n"
@@ -1291,13 +1323,8 @@ class TestTestPathBFSIsolation:
         cg.add_module(Path("/app/tests/test_base.py"), ast.parse(test_src), test_src)
         cg.add_module(Path("/app/src/utils.py"), ast.parse(prod_src), prod_src)
         cg.compute()
-        findings = [
-            f for f in cg.n1_findings()
-            if "/app/src/" in str(f.location.path)
-        ]
-        assert findings == [], (
-            "test-file fn() should NOT contaminate production fn() via BFS"
-        )
+        findings = [f for f in cg.n1_findings() if "/app/src/" in str(f.location.path)]
+        assert findings == [], "test-file fn() should NOT contaminate production fn() via BFS"
 
 
 class TestDeferredClosureNotDbAdjacent:
@@ -1347,6 +1374,7 @@ class TestDeferredClosureNotDbAdjacent:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Direct DB call function in loop SHOULD be flagged"
 
@@ -1366,6 +1394,7 @@ class TestWhileLoopN1:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "while True with DB call per message SHOULD be flagged"
 
@@ -1383,19 +1412,12 @@ class TestWhileLoopN1:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "while True calling DB helper per message SHOULD be flagged"
 
     def test_while_condition_not_flagged(self):
         """while cursor: (bounded) should NOT be flagged — not an infinite consumer."""
-        src = (
-            "async def paginate(session):\n"
-            "    cursor = None\n"
-            "    while cursor is not None or True:\n"
-            "        rows, cursor = await session.execute('SELECT ...')\n"
-            "        if not cursor:\n"
-            "            break\n"
-        )
         # Only "while True" / "while 1" patterns are flagged
         src2 = (
             "async def paginate(session, done):\n"
@@ -1433,6 +1455,7 @@ class TestWhileLoopN1:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         warnings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         infos = [f for f in cg.n1_findings() if f.severity == Severity.INFO]
         assert warnings == [], "migrate_ function should NOT produce WARNING"
@@ -1449,6 +1472,7 @@ class TestWhileLoopN1:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Inner for loop in while True body SHOULD be flagged"
 
@@ -1466,6 +1490,7 @@ class TestNestedForLoopN1:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Inner for loop DB call per item SHOULD be flagged"
 
@@ -1480,6 +1505,7 @@ class TestNestedForLoopN1:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Inner loop uses 'row', not 'page' — must still flag"
 
@@ -1492,6 +1518,7 @@ class TestNestedForLoopN1:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Standard for loop DB call SHOULD still be flagged"
 
@@ -1509,6 +1536,7 @@ class TestLoopVarAliasing:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Aliased loop var used in DB call SHOULD be flagged"
 
@@ -1522,6 +1550,7 @@ class TestLoopVarAliasing:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Tuple-unpacked loop var used in DB call SHOULD be flagged"
 
@@ -1557,6 +1586,7 @@ class TestDjangoORMDetection:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Django objects.filter() per loop item SHOULD be flagged"
 
@@ -1569,6 +1599,7 @@ class TestDjangoORMDetection:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Django objects.get() per loop item SHOULD be flagged"
 
@@ -1581,6 +1612,7 @@ class TestDjangoORMDetection:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Django objects.create() per loop item SHOULD be flagged"
 
@@ -1593,6 +1625,7 @@ class TestDjangoORMDetection:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Django book_set.all() (reverse FK) per author SHOULD be flagged"
 
@@ -1605,6 +1638,7 @@ class TestDjangoORMDetection:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "Django comment_set.filter() (reverse FK) SHOULD be flagged"
 
@@ -1644,6 +1678,7 @@ class TestORMHighLevelMethods:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "fetch_related() per loop item SHOULD be flagged"
 
@@ -1656,6 +1691,7 @@ class TestORMHighLevelMethods:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "fetch_link() per loop item SHOULD be flagged"
 
@@ -1687,8 +1723,11 @@ class TestWhileRetryLoopSuppression:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         warnings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
-        assert warnings == [], "Lock acquire retry (while True: if: return) MUST NOT be flagged as WARNING"
+        assert warnings == [], (
+            "Lock acquire retry (while True: if: return) MUST NOT be flagged as WARNING"
+        )
 
     def test_try_return_retry_not_flagged(self):
         """while True: try: return await op() should NOT be flagged as consumer N+1."""
@@ -1703,6 +1742,7 @@ class TestWhileRetryLoopSuppression:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         warnings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert warnings == [], "try/return retry loop MUST NOT be flagged as consumer N+1"
 
@@ -1717,6 +1757,7 @@ class TestWhileRetryLoopSuppression:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         findings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert len(findings) >= 1, "True consumer loop (no early return) SHOULD still be flagged"
 
@@ -1771,7 +1812,9 @@ class TestDjangoRelatedManagerN1:
         )
         cg = _cg(src)
         findings = list(cg.n1_findings())
-        assert len(findings) >= 1, "order.gift_cards.select_for_update() in inner loop should be flagged"
+        assert len(findings) >= 1, (
+            "order.gift_cards.select_for_update() in inner loop should be flagged"
+        )
 
     def test_plain_dict_get_not_flagged(self):
         """for item in items: item.cache.get(key) must NOT be flagged (get not in safe set)."""
@@ -1865,6 +1908,7 @@ class TestWhileRetryBreakSuppression:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         warnings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert warnings == [], "WATCH/MULTI/EXEC retry with break must NOT be flagged"
 
@@ -1881,6 +1925,7 @@ class TestWhileRetryBreakSuppression:
         )
         cg = _cg(src)
         from pyperfguard.core.severity import Severity
+
         warnings = [f for f in cg.n1_findings() if f.severity == Severity.WARNING]
         assert warnings == [], "break-in-try monitoring loop must NOT be flagged as consumer N+1"
 

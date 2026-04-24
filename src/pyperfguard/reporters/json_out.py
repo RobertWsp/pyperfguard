@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, TextIO
+from typing import TextIO
 
 from pyperfguard.core.finding import Finding
 
@@ -45,9 +46,7 @@ class JsonReporter:
         self.verbose = verbose
         if indent is not None:
             self.indent = indent
-        elif verbose:
-            self.indent = 2
-        elif hasattr(self.stream, "isatty") and self.stream.isatty():
+        elif verbose or (hasattr(self.stream, "isatty") and self.stream.isatty()):
             self.indent = 2
         else:
             self.indent = None

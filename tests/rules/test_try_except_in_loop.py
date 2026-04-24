@@ -1,4 +1,5 @@
 """Tests for PKN016: try/except inside a loop."""
+
 from __future__ import annotations
 
 import ast
@@ -64,13 +65,7 @@ def test_try_except_in_while_loop_flagged():
 
 
 def test_try_except_outside_loop_not_flagged():
-    src = (
-        "try:\n"
-        "    for item in items:\n"
-        "        process(item)\n"
-        "except ValueError:\n"
-        "    handle()\n"
-    )
+    src = "try:\n    for item in items:\n        process(item)\nexcept ValueError:\n    handle()\n"
     findings = _run(src)
     assert findings == []
 

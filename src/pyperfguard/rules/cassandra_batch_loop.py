@@ -30,7 +30,7 @@ carry the same coordinator overhead. UNLOGGED batches are flagged at WARNING.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -107,9 +107,7 @@ class CassandraBatchLoopRule:
             return False
         # Heuristic: receiver name contains "batch"
         receiver = func.value
-        if isinstance(receiver, ast.Name) and "batch" in receiver.id.lower():
-            return True
-        return False
+        return bool(isinstance(receiver, ast.Name) and "batch" in receiver.id.lower())
 
     @staticmethod
     def _resolve_batch_type(batch_var: str, ctx: AstContext) -> str | None:

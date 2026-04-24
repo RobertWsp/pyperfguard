@@ -17,7 +17,7 @@ import hashlib
 from typing import Any
 
 
-def normalize(command: Any, *, depth: int = 0) -> str:  # noqa: ANN401
+def normalize(command: Any, *, depth: int = 0) -> str:
     """Recursively normalize ``command`` to a canonical string."""
     if depth > 10:
         return "?"
@@ -32,6 +32,6 @@ def normalize(command: Any, *, depth: int = 0) -> str:  # noqa: ANN401
     return "?"
 
 
-def fingerprint_hash(command: Any) -> str:  # noqa: ANN401
+def fingerprint_hash(command: Any) -> str:
     """Return a 16-hex-char stable hash of the normalized command."""
     return hashlib.sha1(normalize(command).encode()).hexdigest()[:16]

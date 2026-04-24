@@ -61,7 +61,9 @@ def test_async_with_open_same_file_in_loop_flagged():
 
 def test_async_with_open_loop_var_not_flagged():
     # Different file per iteration via loop variable — legitimate.
-    src = "async def f():\n    for p in paths:\n        async with open(p) as fp:\n            pass\n"
+    src = (
+        "async def f():\n    for p in paths:\n        async with open(p) as fp:\n            pass\n"
+    )
     findings = _run(src)
     assert findings == []
 

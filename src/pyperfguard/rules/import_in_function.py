@@ -27,7 +27,7 @@ optional dependencies or circular import avoidance.
 from __future__ import annotations
 
 import ast
-from typing import Iterable
+from collections.abc import Iterable
 
 from pyperfguard.ast_engine.context import AstContext
 from pyperfguard.core.finding import Finding, Fix
@@ -39,12 +39,31 @@ from pyperfguard.core.severity import Severity
 _CACHING_DECORATORS = frozenset({"cached_property", "lru_cache", "cache"})
 
 # Modules known to have significant import time (heuristic list).
-_HEAVY_MODULES = frozenset({
-    "pandas", "numpy", "tensorflow", "torch", "sklearn", "scipy",
-    "matplotlib", "cv2", "PIL", "spacy", "nltk", "transformers",
-    "boto3", "botocore", "pyspark", "dask", "numba",
-    "sqlalchemy", "django", "flask", "fastapi",
-})
+_HEAVY_MODULES = frozenset(
+    {
+        "pandas",
+        "numpy",
+        "tensorflow",
+        "torch",
+        "sklearn",
+        "scipy",
+        "matplotlib",
+        "cv2",
+        "PIL",
+        "spacy",
+        "nltk",
+        "transformers",
+        "boto3",
+        "botocore",
+        "pyspark",
+        "dask",
+        "numba",
+        "sqlalchemy",
+        "django",
+        "flask",
+        "fastapi",
+    }
+)
 
 
 class ImportInFunctionRule:
@@ -65,9 +84,9 @@ class ImportInFunctionRule:
             return  # cached_property / lru_cache — called once, cost amortised
         module_names = self._extract_names(node)
         heavy = [
-            n for n in module_names
-            if n.split(".")[0] in _HEAVY_MODULES
-            and not self._is_self_import(n.split(".")[0], ctx)
+            n
+            for n in module_names
+            if n.split(".")[0] in _HEAVY_MODULES and not self._is_self_import(n.split(".")[0], ctx)
         ]
         if not heavy:
             return
@@ -120,4 +139,9 @@ class ImportInFunctionRule:
     @staticmethod
     def _in_try_except(ctx: AstContext) -> bool:
         """Return True if the import is directly inside a try/except block."""
-        return any(isinstance(a, (ast.Try, ast.TryStar)) for a in ctx.ancestors)
+        # ast.TryStar (try/except*) exists only on Python 3.11+.
+        _try_star = getattr(ast, "TryStar", None)
+        return any(
+            isinstance(a, ast.Try) or (_try_star is not None and isinstance(a, _try_star))
+            for a in ctx.ancestors
+        )

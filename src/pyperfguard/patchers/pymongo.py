@@ -15,8 +15,8 @@ so ``sys._getframe`` captures the correct call stack in ``started``.
 
 from __future__ import annotations
 
-import time
 import threading
+import time
 from types import ModuleType
 
 
@@ -110,7 +110,7 @@ class PyMongoPatcher:
         self._listener = _PyPerfMongoListener()
         try:
             module.monitoring.register(self._listener)
-        except Exception:  # noqa: BLE001
+        except Exception:
             self._listener = None
 
     def uninstall(self, module: ModuleType) -> None:

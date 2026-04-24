@@ -15,16 +15,16 @@ def test_default_config_values():
 def test_load_from_pyproject(tmp_path: Path):
     py = tmp_path / "pyproject.toml"
     py.write_text(
-        '[tool.pyperfguard]\n'
+        "[tool.pyperfguard]\n"
         'select = ["PKN001"]\n'
         'ignore = ["PKN002"]\n'
-        '\n'
-        '[tool.pyperfguard.runtime]\n'
-        'enabled = true\n'
-        'sampling_rate = 50\n'
+        "\n"
+        "[tool.pyperfguard.runtime]\n"
+        "enabled = true\n"
+        "sampling_rate = 50\n"
         'patchers = ["sqlalchemy"]\n'
-        '\n'
-        '[tool.pyperfguard.report]\n'
+        "\n"
+        "[tool.pyperfguard.report]\n"
         'format = "sarif"\n'
     )
     cfg = Config.load(py)
@@ -70,6 +70,6 @@ def test_min_severity_loaded_from_config(tmp_path: Path):
 
 def test_verbose_loaded_from_config(tmp_path: Path):
     py = tmp_path / "pyproject.toml"
-    py.write_text('[tool.pyperfguard]\nverbose = true\n')
+    py.write_text("[tool.pyperfguard]\nverbose = true\n")
     cfg = Config.load(py)
     assert cfg.verbose is True

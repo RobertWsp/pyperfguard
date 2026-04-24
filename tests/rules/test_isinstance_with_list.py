@@ -1,4 +1,5 @@
 """Tests for PKN023: isinstance() called with a list instead of a tuple."""
+
 from __future__ import annotations
 
 import ast
