@@ -102,23 +102,22 @@ class _InstrumentedConnection:
 
 def wrap_connect(module: ModuleType, db_system: str = "sql") -> None:
     """Wrap ``module.connect`` in-place with instrumentation."""
-    original = module.connect
+    original = getattr(module, "connect")
 
     @functools.wraps(original)
     def patched_connect(*args: Any, **kwargs: Any) -> _InstrumentedConnection:
         real_conn = original(*args, **kwargs)
         return _InstrumentedConnection(real_conn, db_system)
 
-    module.connect = patched_connect
-    # Store original for uninstall
-    module._pyperfguard_original_connect = original
+    setattr(module, "connect", patched_connect)
+    setattr(module, "_pyperfguard_original_connect", original)
 
 
 def unwrap_connect(module: ModuleType) -> None:
     """Reverse ``wrap_connect`` (idempotent)."""
     original = getattr(module, "_pyperfguard_original_connect", None)
     if original is not None:
-        module.connect = original
+        setattr(module, "connect", original)
         try:
             delattr(module, "_pyperfguard_original_connect")
         except AttributeError:
