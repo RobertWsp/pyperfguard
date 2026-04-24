@@ -1,0 +1,113 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pyperfguard"
+version = "0.1.0"
+description = "Agnostic, pluggable Python performance & anti-pattern guard (AST + runtime hybrid). Detects N+1, blocking calls in async, Cassandra anti-patterns and more."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Robert" }]
+keywords = ["lint", "performance", "n+1", "ast", "instrumentation", "cassandra", "asyncio"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = []
+
+[project.optional-dependencies]
+rich = ["rich>=13"]
+libcst = ["libcst>=1.1"]
+pg = ["pglast>=6"]
+all = ["rich>=13", "libcst>=1.1", "pglast>=6"]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "mypy>=1.10",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+pyperfguard = "pyperfguard.cli:main"
+
+[project.entry-points."pyperfguard.rules"]
+# Built-in rules registered via entry points so external plugins use the same channel.
+mutable_default = "pyperfguard.rules.mutable_default:MutableDefaultRule"
+bare_except = "pyperfguard.rules.bare_except:BareExceptRule"
+allow_filtering = "pyperfguard.rules.allow_filtering:AllowFilteringRule"
+string_concat_loop = "pyperfguard.rules.string_concat_loop:StringConcatLoopRule"
+open_in_loop = "pyperfguard.rules.open_in_loop:OpenInLoopRule"
+recompile_in_loop = "pyperfguard.rules.recompile_in_loop:RecompileInLoopRule"
+deepcopy_in_loop = "pyperfguard.rules.deepcopy_in_loop:DeepcopyInLoopRule"
+datetime_in_loop = "pyperfguard.rules.datetime_in_loop:DatetimeInLoopRule"
+await_in_loop = "pyperfguard.rules.await_in_loop:AwaitInLoopRule"
+sleep_in_async = "pyperfguard.rules.sleep_in_async:SleepInAsyncRule"
+cassandra_prepare_loop = "pyperfguard.rules.cassandra_prepare_loop:CassandraPrepareLoopRule"
+cassandra_in_query = "pyperfguard.rules.cassandra_in_query:CassandraInQueryRule"
+cassandra_batch_loop = "pyperfguard.rules.cassandra_batch_loop:CassandraBatchLoopRule"
+import_in_function = "pyperfguard.rules.import_in_function:ImportInFunctionRule"
+list_before_for = "pyperfguard.rules.list_before_for:ListBeforeForRule"
+try_except_in_loop = "pyperfguard.rules.try_except_in_loop:TryExceptInLoopRule"
+cache_on_method = "pyperfguard.rules.cache_on_method:CacheOnMethodRule"
+late_binding_closure = "pyperfguard.rules.late_binding_closure:LateBindingClosureRule"
+loop_append_to_comprehension = "pyperfguard.rules.loop_append_to_comprehension:LoopAppendToComprehensionRule"
+unnecessary_iterable_for_in = "pyperfguard.rules.unnecessary_iterable_for_in:UnnecessaryIterableForInRule"
+loop_dict_to_comprehension = "pyperfguard.rules.loop_dict_to_comprehension:LoopDictToComprehensionRule"
+prefer_tuple_over_list_for_in = "pyperfguard.rules.prefer_tuple_over_list_for_in:PreferTupleOverListForInRule"
+isinstance_with_list = "pyperfguard.rules.isinstance_with_list:IsinstanceWithListRule"
+blocking_cassandra_in_async = "pyperfguard.rules.blocking_cassandra_in_async:BlockingCassandraInAsyncRule"
+sequential_awaits_in_loop = "pyperfguard.rules.sequential_awaits_in_loop:SequentialAwaitsInLoopRule"
+
+[project.entry-points."pyperfguard.patchers"]
+# Each entry point points to a zero-arg patcher class targeting a specific driver.
+# DBAPIPatcher is a factory (requires module_name arg) — registered programmatically.
+sqlalchemy = "pyperfguard.patchers.sqlalchemy:SQLAlchemyPatcher"
+cassandra = "pyperfguard.patchers.cassandra_driver:CassandraPatcher"
+pymongo = "pyperfguard.patchers.pymongo:PyMongoPatcher"
+
+[project.entry-points."pyperfguard.reporters"]
+terminal = "pyperfguard.reporters.terminal:TerminalReporter"
+json = "pyperfguard.reporters.json_out:JsonReporter"
+sarif = "pyperfguard.reporters.sarif:SarifReporter"
+
+[project.urls]
+Homepage = "https://github.com/RobertWsp/pyperfguard"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyperfguard"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/pyperfguard", "tests", "README.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/pyperfguard"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.pyperfguard]
+select = ["PKN"]
+ignore = []
+exclude = ["**/.venv/**", "**/build/**", "**/dist/**", "**/__pycache__/**"]
