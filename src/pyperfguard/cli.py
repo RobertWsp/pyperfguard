@@ -62,6 +62,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("rules", help="List discovered rules and exit")
     sub.add_parser("reporters", help="List discovered reporters and exit")
+    sub.add_parser(
+        "lsp",
+        help=(
+            "Start a Language Server Protocol server on stdio. "
+            "Publishes pyperfguard diagnostics on textDocument/didOpen and didChange events."
+        ),
+    )
 
     bs = sub.add_parser("bootstrap", help="Manage sitecustomize.py auto-instrumentation")
     bs_sub = bs.add_subparsers(dest="bs_command", required=True)
@@ -125,6 +132,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         # Non-zero exit only on errors; warnings/info don't fail the build.
         return 1 if any(f.severity is Severity.ERROR for f in findings) else 0
+
+    if args.command == "lsp":
+        from pyperfguard.lsp_server import main as lsp_main
+
+        lsp_main()
+        return 0  # lsp_main calls sys.exit internally; this is unreachable
 
     if args.command == "bootstrap":
         from pyperfguard._bootstrap.bootstrap import install_sitecustomize, uninstall_sitecustomize
